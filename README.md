@@ -249,7 +249,3 @@ MIT — feel free to use this for learning, portfolio, or at work.
 **⭐ If this repository helps you on your senior engineer journey — star it! ⭐**
 
 </div>
-
----
-
-Этот README полностью на английском, сохраняет всю структуру и профессиональный тон. Хотите, теперь настроим репозиторий на GitHub и начнем с инфраструктуры или первой задачи?
