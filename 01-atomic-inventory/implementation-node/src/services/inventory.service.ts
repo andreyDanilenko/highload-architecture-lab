@@ -1,7 +1,7 @@
-import { CreateTransactionDTO } from '../models/transaction';
-import { IInventoryService, ReserveResult } from '../contracts/inventory-service.contracts';
-import { IProductRepository } from '../contracts/product-repository.contracts';
-import { ITransactionRepository } from '../contracts/transaction-repository.contracts';
+import { CreateTransactionDTO } from '@/models/transaction';
+import { IInventoryService, ReserveResult } from '@/contracts/inventory-service.contracts';
+import { IProductRepository } from '@/contracts/product-repository.contracts';
+import { ITransactionRepository } from '@/contracts/transaction-repository.contracts';
 
 export class InventoryService implements IInventoryService {
   constructor(

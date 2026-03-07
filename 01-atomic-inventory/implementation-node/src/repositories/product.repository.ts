@@ -1,5 +1,5 @@
-import { Product, CreateProductDTO } from '../models/product';
-import { IProductRepository } from '../contracts/product-repository.contracts';
+import { Product, CreateProductDTO } from '@/models/product';
+import { IProductRepository } from '@/contracts/product-repository.contracts';
 
 export class ProductRepository implements IProductRepository {
   

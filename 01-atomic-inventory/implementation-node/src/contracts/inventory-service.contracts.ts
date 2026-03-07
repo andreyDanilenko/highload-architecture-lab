@@ -1,5 +1,5 @@
-import { Product } from '../models/product';
-import { InventoryTransaction, CreateTransactionDTO } from '../models/transaction';
+import { Product } from '@/models/product';
+import { InventoryTransaction, CreateTransactionDTO } from '@/models/transaction';
 
 export interface ReserveResult {
   success: boolean;

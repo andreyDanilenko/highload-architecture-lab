@@ -1,4 +1,4 @@
-import { Product, CreateProductDTO } from '../models/product';
+import { Product, CreateProductDTO } from '@/models/product';
 
 export interface IProductRepository {
   /**

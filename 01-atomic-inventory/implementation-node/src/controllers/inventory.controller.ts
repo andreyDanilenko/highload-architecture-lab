@@ -1,6 +1,6 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
-import { IInventoryService } from '../contracts/inventory-service.contracts';
-import { reserveSchema, skuParamSchema, ReserveRequest } from '../schemas/inventory.schema';
+import { IInventoryService } from '@/contracts/inventory-service.contracts';
+import { reserveSchema, skuParamSchema, ReserveRequest } from '@/schemas/inventory.schema';
 
 export class InventoryController {
   constructor(private inventoryService: IInventoryService) {}

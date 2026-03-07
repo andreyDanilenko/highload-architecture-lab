@@ -1,8 +1,7 @@
 import Fastify from 'fastify';
 import dotenv from 'dotenv';
-import { pgPool } from './config/database';
-import { redisClient, connectRedis } from './config/redis';
-import { registerRoutes } from './routes';
+import { pgPool, redisClient, connectRedis } from '@/config';
+import { registerRoutes } from '@/routes';
 
 dotenv.config();
 

@@ -1,5 +1,5 @@
-import { InventoryTransaction, CreateTransactionDTO } from '../models/transaction';
-import { ITransactionRepository } from '../contracts/transaction-repository.contracts';
+import { InventoryTransaction, CreateTransactionDTO } from '@/models/transaction';
+import { ITransactionRepository } from '@/contracts/transaction-repository.contracts';
 
 export class TransactionRepository implements ITransactionRepository {
   

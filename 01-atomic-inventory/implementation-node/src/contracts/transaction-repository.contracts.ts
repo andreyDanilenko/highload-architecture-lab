@@ -1,4 +1,4 @@
-import { InventoryTransaction, CreateTransactionDTO } from '../models/transaction';
+import { InventoryTransaction, CreateTransactionDTO } from '@/models/transaction';
 
 export interface ITransactionRepository {
   /**
