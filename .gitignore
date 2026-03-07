@@ -5,6 +5,7 @@
 **/dist/**/*
 **/build/
 **/out/
+**/.env/**/*
 
 **/vendor/
 **/bin/
