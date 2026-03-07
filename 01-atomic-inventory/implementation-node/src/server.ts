@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import dotenv from 'dotenv';
 import { pgPool } from './config/database';
 import { redisClient, connectRedis } from './config/redis';
+import { registerRoutes } from './routes';
 
 dotenv.config();
 
@@ -13,13 +14,11 @@ const fastify = Fastify({
 const PORT = parseInt(process.env.PORT || '3000');
 const HOST = process.env.HOST || '0.0.0.0';
 
+// Health check
 fastify.get('/health', async (request, reply) => {
   const dbStatus = await pgPool.query('SELECT 1 as connected')
     .then(() => 'ok')
-    .catch((err) => {
-      console.error('PostgreSQL health check failed:', err.message);
-      return 'error';
-    });
+    .catch(() => 'error');
 
   const redisStatus = redisClient.isReady ? 'ok' : 'disconnected';
 
@@ -33,6 +32,9 @@ fastify.get('/health', async (request, reply) => {
     }
   };
 });
+
+// Register all routes
+fastify.register(registerRoutes);
 
 const start = async () => {
   try {
@@ -53,27 +55,13 @@ const start = async () => {
 
 start();
 
+// Graceful shutdown
 const gracefulShutdown = async (signal: string) => {
-  console.log(`\n🛑 Received ${signal}, shutting down gracefully...`);
-  
-  try {
-    await fastify.close();
-    console.log('✅ HTTP server closed');
-    
-    await pgPool.end();
-    console.log('✅ PostgreSQL pool closed');
-    
-    if (redisClient.isReady) {
-      await redisClient.quit();
-      console.log('✅ Redis connection closed');
-    }
-    
-    console.log('👋 Goodbye!');
-    process.exit(0);
-  } catch (error) {
-    console.error('❌ Error during shutdown:', error);
-    process.exit(1);
-  }
+  console.log(`\n🛑 Received ${signal}, shutting down...`);
+  await fastify.close();
+  await pgPool.end();
+  if (redisClient.isReady) await redisClient.quit();
+  process.exit(0);
 };
 
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
