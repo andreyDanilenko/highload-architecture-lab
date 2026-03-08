@@ -52,10 +52,6 @@ Step-by-step plans per subtask are in `docs/`:
 
 ---
 
-## Running (shared for Node and Go)
-
-**→ [COMMANDS.md](COMMANDS.md)** — all commands and where `.env` lives.
-
 Infrastructure lives in this folder (`01-atomic-inventory`): Docker Compose, init SQL, Makefile.
 
 **1. Env (one file for Docker + Node/Go)**
