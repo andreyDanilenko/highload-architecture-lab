@@ -1,37 +1,41 @@
-import { FastifyRequest } from 'fastify';
-import { IInventoryService } from '@/contracts/inventory-service.contracts';
-import { reserveSchema, skuParamSchema, ReserveRequest } from '@/schemas/inventory.schema';
+import { FastifyRequest } from "fastify";
+import { IInventoryService } from "@/contracts/inventory-service.contracts";
+import {
+	reserveSchema,
+	skuParamSchema,
+	ReserveRequest,
+} from "@/schemas/inventory.schema";
 
 export class InventoryController {
-  constructor(private inventoryService: IInventoryService) {}
+	constructor(private inventoryService: IInventoryService) {}
 
-  async getStock(request: FastifyRequest<{ Params: { sku: string } }>) {
-    const { sku } = skuParamSchema.parse({ sku: request.params.sku });
-    request.log.debug({ sku }, 'Getting stock');
-    
-    const stock = await this.inventoryService.getBalance(sku);
-    
-    return {
-      sku,
-      stock,
-      timestamp: new Date().toISOString()
-    };
-  }
+	async getStock(request: FastifyRequest<{ Params: { sku: string } }>) {
+		const { sku } = skuParamSchema.parse({ sku: request.params.sku });
+		request.log.debug({ sku }, "Getting stock");
 
-  async reserve(request: FastifyRequest<{ Body: ReserveRequest }>) {
-    const body = reserveSchema.parse(request.body);
-    request.log.debug({ body }, 'Processing reservation');
-    
-    const result = await this.inventoryService.reserveStock({
-      sku: body.sku,
-      quantity: body.quantity,
-      requestId: body.requestId
-    });
+		const stock = await this.inventoryService.getBalance(sku);
 
-    return {
-      success: true,
-      duplicated: result.duplicated,
-      newBalance: result.newBalance
-    };
-  }
+		return {
+			sku,
+			stock,
+			timestamp: new Date().toISOString(),
+		};
+	}
+
+	async reserve(request: FastifyRequest<{ Body: ReserveRequest }>) {
+		const body = reserveSchema.parse(request.body);
+		request.log.debug({ body }, "Processing reservation");
+
+		const result = await this.inventoryService.reserveStock({
+			sku: body.sku,
+			quantity: body.quantity,
+			requestId: body.requestId,
+		});
+
+		return {
+			success: true,
+			duplicated: result.duplicated,
+			newBalance: result.newBalance,
+		};
+	}
 }
