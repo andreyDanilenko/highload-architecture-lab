@@ -13,6 +13,10 @@ interface ProductRow {
 	updated_at: Date;
 }
 
+/**
+ * Repository for products table.
+ * Handles product CRUD with optimistic locking support.
+ */
 export class ProductRepository implements IProductRepository {
 	constructor(private readonly pool: Pool) {}
 
@@ -67,6 +71,9 @@ export class ProductRepository implements IProductRepository {
 		}
 	}
 
+	/**
+	 * Optimistic locking update. Returns false if version mismatch.
+	 */
 	async updateStock(
 		sku: string,
 		newQuantity: number,
