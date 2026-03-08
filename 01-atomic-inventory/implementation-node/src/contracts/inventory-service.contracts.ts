@@ -28,9 +28,10 @@ export interface IInventoryService {
   /**
    * Get current balance for a product
    * @param sku - product SKU
-   * @returns current stock or null if not found
+   * @returns current stock
+   * @throws NotFoundError if product does not exist
    */
-  getBalance(sku: string): Promise<number | null>;
+  getBalance(sku: string): Promise<number>;
 
   /**
    * Check if product has sufficient stock

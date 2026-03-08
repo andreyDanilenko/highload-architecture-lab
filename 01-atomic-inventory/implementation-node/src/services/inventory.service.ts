@@ -2,7 +2,13 @@ import { CreateTransactionDTO } from '@/models/transaction';
 import { IInventoryService, ReserveResult } from '@/contracts/inventory-service.contracts';
 import { IProductRepository } from '@/contracts/product-repository.contracts';
 import { ITransactionRepository } from '@/contracts/transaction-repository.contracts';
+import { NotFoundError, InsufficientStockError, BusinessError } from '@/shared/errors/app-errors';
 
+/**
+ * Domain layer: business rules and domain errors only.
+ * - Decides "can this operation happen?" and throws AppError (NotFound, InsufficientStock, etc.) when not.
+ * - Does not know about HTTP; controller + error-handler map errors to status codes.
+ */
 export class InventoryService implements IInventoryService {
   constructor(
     private productRepo: IProductRepository,
@@ -10,49 +16,51 @@ export class InventoryService implements IInventoryService {
   ) {}
 
   async reserveStock(dto: CreateTransactionDTO): Promise<ReserveResult> {
-    console.log(`🔍 [InventoryService] reserveStock called with:`, dto);
-    
     const existingTx = await this.transactionRepo.findByRequestId(dto.requestId);
     if (existingTx) {
-      console.log(`⚠️ Duplicate request detected: ${dto.requestId}`);
+      if (existingTx.sku !== dto.sku || existingTx.quantity !== dto.quantity) {
+        throw new BusinessError(
+          'Request payload mismatch',
+          'PAYLOAD_MISMATCH',
+          { requestId: dto.requestId, existing: existingTx, new: dto }
+        );
+      }
       return {
         success: true,
         duplicated: true,
-        newBalance: await this.getBalance(dto.sku) || 0
+        newBalance: await this.getBalance(dto.sku)
       };
     }
 
+    // 2. Check product exists
     const product = await this.productRepo.findBySku(dto.sku);
     if (!product) {
-      console.log(`❌ Product not found: ${dto.sku}`);
-      return {
-        success: false,
-        error: `Product not found: ${dto.sku}`
-      };
+      throw new NotFoundError('Product', { sku: dto.sku });
     }
 
+    // 3. Check stock
     if (product.stockQuantity < dto.quantity) {
-      console.log(`❌ Insufficient stock: available ${product.stockQuantity}, requested ${dto.quantity}`);
-      return {
-        success: false,
-        error: `Insufficient stock. Available: ${product.stockQuantity}`,
-        newBalance: product.stockQuantity
-      };
+      throw new InsufficientStockError(
+        dto.sku, 
+        dto.quantity, 
+        product.stockQuantity
+      );
     }
 
-    // 4. Рассчитываем новый остаток
+    // 4. Compute new balance
     const newQuantity = product.stockQuantity - dto.quantity;
-    
-    // 5. Обновляем остаток (наивно)
+
+    // 5. Update (naive, no locking)
     const updated = await this.productRepo.updateStockNaive(dto.sku, newQuantity);
-    
     if (!updated) {
-      return {
-        success: false,
-        error: 'Failed to update stock'
-      };
+      throw new BusinessError(
+        'Failed to update stock',
+        'UPDATE_FAILED',
+        { sku: dto.sku, newQuantity }
+      );
     }
 
+    // 6. Create transaction record
     const transaction = await this.transactionRepo.create(dto);
 
     return {
@@ -63,24 +71,21 @@ export class InventoryService implements IInventoryService {
     };
   }
 
-  async releaseStock(dto: CreateTransactionDTO): Promise<ReserveResult> {
-    console.log(`🔍 [InventoryService] releaseStock called with:`, dto);
-    // TODO: Implement compensation logic
-    return {
-      success: true,
-      newBalance: await this.getBalance(dto.sku) || 0
-    };
-  }
-
-  async getBalance(sku: string): Promise<number | null> {
-    console.log(`🔍 [InventoryService] getBalance called with sku: ${sku}`);
+  async getBalance(sku: string): Promise<number> {
     const stock = await this.productRepo.getStock(sku);
+    if (stock === null) {
+      throw new NotFoundError('Product', { sku });
+    }
     return stock;
   }
 
   async hasSufficientStock(sku: string, quantity: number): Promise<boolean> {
-    console.log(`🔍 [InventoryService] hasSufficientStock called with sku: ${sku}, quantity: ${quantity}`);
     const stock = await this.getBalance(sku);
-    return stock !== null && stock >= quantity;
+    return stock >= quantity;
+  }
+
+  async releaseStock(dto: CreateTransactionDTO): Promise<ReserveResult> {
+    // TODO: compensation / rollback implementation
+    throw new Error('Method not implemented');
   }
 }

@@ -1,7 +1,9 @@
-import Fastify from 'fastify';
 import dotenv from 'dotenv';
+import Fastify from 'fastify';
 import { pgPool, redisClient, connectRedis } from '@/config';
+import { setupErrorHandler } from '@/plugins/error-handler';
 import { registerRoutes } from '@/routes';
+
 
 dotenv.config();
 
@@ -9,6 +11,8 @@ const fastify = Fastify({
   logger: true,
   trustProxy: true
 });
+
+setupErrorHandler(fastify);
 
 const PORT = parseInt(process.env.PORT || '3000');
 const HOST = process.env.HOST || '0.0.0.0';
