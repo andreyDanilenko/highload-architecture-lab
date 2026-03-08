@@ -209,17 +209,15 @@ export class InventoryService implements IInventoryService {
 					client,
 					dto,
 				);
-				// Sync PG stock so getBalance and reconciliation stay consistent
-				const updated = await this.productRepo.updateStockWithClient(
+				// Atomic decrement in PG (delta only); PG re-checks stock, no overwrite
+				const updated = await this.productRepo.decrementStockWithClient(
 					client,
 					dto.sku,
-					newBalance,
+					dto.quantity,
 				);
 				if (!updated) {
-					throw new BusinessError("Failed to sync stock to PG", "UPDATE_FAILED", {
-						sku: dto.sku,
-						newBalance,
-					});
+					// PG had insufficient stock (drift vs Redis) — throw to trigger Redis compensation
+					throw new InsufficientStockError(dto.sku, dto.quantity, 0);
 				}
 				return this.successResult(newBalance, transaction);
 			});

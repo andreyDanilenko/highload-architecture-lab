@@ -162,6 +162,31 @@ export class ProductRepository implements IProductRepository {
 		}
 	}
 
+	/**
+	 * Atomically decrement stock by quantity. Use inside a transaction.
+	 * Returns false if insufficient stock (no row updated).
+	 */
+	async decrementStockWithClient(
+		client: PoolClient,
+		sku: string,
+		quantity: number,
+	): Promise<boolean> {
+		try {
+			const { rowCount } = await client.query(
+				`UPDATE products SET stock_quantity = stock_quantity - $1, updated_at = NOW()
+				 WHERE sku = $2 AND stock_quantity >= $1`,
+				[quantity, sku],
+			);
+			return (rowCount ?? 0) > 0;
+		} catch (error) {
+			throw new DatabaseError("ProductRepository.decrementStockWithClient", {
+				cause: error,
+				sku,
+				quantity,
+			});
+		}
+	}
+
 	async create(product: CreateProductDTO): Promise<Product> {
 		try {
 			const exists = await this.exists(product.sku);

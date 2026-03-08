@@ -65,4 +65,14 @@ export interface IProductRepository {
 		sku: string,
 		newQuantity: number,
 	): Promise<boolean>;
+
+	/**
+	 * Atomically decrement stock by quantity. Use inside a transaction (e.g. after Redis reserve).
+	 * @returns true if row was updated (sufficient stock), false if stock_quantity < quantity
+	 */
+	decrementStockWithClient(
+		client: PoolClient,
+		sku: string,
+		quantity: number,
+	): Promise<boolean>;
 }

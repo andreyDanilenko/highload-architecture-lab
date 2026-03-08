@@ -35,7 +35,8 @@ Step-by-step plans per subtask are in `docs/`:
 - [docs/subtask-1-naive.md](docs/subtask-1-naive.md) — race demo
 - [docs/subtask-2-pessimistic.md](docs/subtask-2-pessimistic.md) — SELECT FOR UPDATE
 - [docs/subtask-3-optimistic.md](docs/subtask-3-optimistic.md) — version + retry
-- [docs/subtask-4-redis.md](docs/subtask-4-redis.md) — Redis + PG
+- [docs/subtask-4-redis.md](docs/subtask-4-redis.md) — Redis + PG (delta in PG, compensating transaction)
+- [docs/strategies-overview.md](docs/strategies-overview.md) — comparison of all four strategies
 
 ---
 
@@ -152,7 +153,7 @@ The Node app logs with Pino: stdout and, when enabled, a file.
 | **Optimistic** | Retries under contention (version conflict) increase latency; many concurrent updates to same SKU can exhaust `maxOptimisticRetries`. No long-held locks; good when conflict rate is low. |
 | **Redis**  | Two sources of truth (Redis + PG): if PG write fails after Redis decrement, Redis stays ahead and becomes inconsistent. Requires compensating transaction (rollback in Redis) and/or reconciliation. If Redis is down, reserve path fails unless fallback to another strategy. |
 
-Подробнее по Redis: описание компенсирующей транзакции, риски и **план стабилизации** (без кода) — [docs/redis-stabilization-plan.md](docs/redis-stabilization-plan.md).
+For Redis: compensating transaction, drift risks, and **stabilization plan** (no code) — [docs/redis-stabilization-plan.md](docs/redis-stabilization-plan.md).
 
 ---
 
