@@ -52,6 +52,38 @@ Step-by-step plans per subtask are in `docs/`:
 
 ---
 
+## Running (shared for Node and Go)
+
+Infrastructure lives in this folder (`01-atomic-inventory`): Docker Compose, init SQL, Makefile.
+
+**1. Env (for Docker)**
+
+```bash
+cp env.example .env
+# .env: DB_USER, DB_PASSWORD, DB_NAME, DB_PORT
+```
+
+**2. Start Postgres and Redis**
+
+```bash
+make infra-up
+```
+
+**3. Reset DB (stock 1000, clear transactions)**
+
+```bash
+make reset-db
+```
+
+**4. Run implementation**
+
+- **Node:** `make run-node` or `cd implementation-node && make dev` — see [implementation-node/README.md](implementation-node/README.md).
+- **Go:** placeholder; see [implementation-go/README.md](implementation-go/README.md).
+
+Other: `make infra-down`, `make infra-logs`, `make infra-ps`, `make infra-reset`.
+
+---
+
 ## Database schema
 
 ```sql
@@ -97,7 +129,7 @@ Responses: 200 — success; 409 — insufficient stock; 404 — product not foun
 - `./scripts/load-test/race-test-naive.sh` — expect lost updates (actual stock > initial - success).
 - `./scripts/load-test/race-test-pessimistic.sh`, `race-test-optimistic.sh`, `race-test-redis.sh` — expect consistency (actual = initial - success).
 
-Details and how to read results: [scripts/load-test/README.md](scripts/load-test/README.md).
+Details and how to read results: [scripts/README.md](scripts/README.md).
 
 ---
 

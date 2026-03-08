@@ -1,4 +1,4 @@
-import { Pool, type PoolClient } from "pg";
+import { Pool, type PoolClient } from "../../node_modules/@types/pg";
 import { Product, CreateProductDTO } from "@/models/product";
 import { IProductRepository } from "@/contracts/product-repository.contracts";
 import { DatabaseError, BusinessError } from "@/shared/errors/app-errors";

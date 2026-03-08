@@ -1,4 +1,4 @@
-import type { Pool } from "pg";
+import type { Pool } from "../../node_modules/@types/pg";
 import { Product } from "@/models/product";
 import { CreateTransactionDTO } from "@/models/transaction";
 import {

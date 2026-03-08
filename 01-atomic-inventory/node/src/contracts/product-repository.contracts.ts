@@ -1,4 +1,4 @@
-import type { PoolClient } from "pg";
+import type { PoolClient } from "../../node_modules/@types/pg";
 import { Product, CreateProductDTO } from "@/models/product";
 
 export interface IProductRepository {
