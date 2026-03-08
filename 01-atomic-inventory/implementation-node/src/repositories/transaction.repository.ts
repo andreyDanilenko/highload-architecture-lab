@@ -4,6 +4,13 @@ import {
 } from "@/models/transaction";
 import { ITransactionRepository } from "@/contracts/transaction-repository.contracts";
 
+interface TransactionRow {
+	id: number;
+	sku: string;
+	quantity: number;
+	request_id: string;
+	created_at: Date;
+}
 export class TransactionRepository implements ITransactionRepository {
 	async create(
 		transaction: CreateTransactionDTO,
