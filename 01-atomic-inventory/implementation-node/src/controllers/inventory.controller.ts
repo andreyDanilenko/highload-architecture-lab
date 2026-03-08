@@ -22,9 +22,10 @@ export class InventoryController {
 		};
 	}
 
+	/** Naive reserve endpoint. Demo/load-test only — race condition under concurrency. */
 	async reserve(request: FastifyRequest<{ Body: ReserveRequest }>) {
 		const body = reserveSchema.parse(request.body);
-		request.log.debug({ body }, "Processing reservation");
+		request.log.debug({ body }, "Processing reservation (naive)");
 
 		const result = await this.inventoryService.reserveStock({
 			sku: body.sku,

@@ -15,9 +15,8 @@ export interface ReserveResult {
 
 export interface IInventoryService {
 	/**
-	 * Reserve stock for a product
-	 * @param dto - transaction data with sku, quantity, requestId
-	 * @returns ReserveResult with status and details
+	 * Reserve stock (naive, no locking). Race condition under concurrency — lost updates.
+	 * @deprecated For demo/load-test only. Use reserveStockPessimistic (or optimistic/redis) in production.
 	 */
 	reserveStock(dto: CreateTransactionDTO): Promise<ReserveResult>;
 
@@ -27,9 +26,8 @@ export interface IInventoryService {
 	reserveStockPessimistic(dto: CreateTransactionDTO): Promise<ReserveResult>;
 
 	/**
-	 * Release previously reserved stock (compensation)
-	 * @param dto - transaction data
-	 * @returns ReserveResult with status
+	 * Release previously reserved stock (compensation).
+	 * @deprecated Not implemented. Do not use in production until implemented.
 	 */
 	releaseStock(dto: CreateTransactionDTO): Promise<ReserveResult>;
 

@@ -7,7 +7,7 @@ export async function inventoryRoutes(fastify: FastifyInstance) {
 		inventoryController.getStock(request),
 	);
 
-	// POST /inventory/reserve
+	// POST /inventory/reserve — naive (no locking). Demo/load-test only. Do not use in production.
 	fastify.post<{ Body: { sku: string; quantity: number; requestId: string } }>(
 		"/reserve",
 		async (request) => inventoryController.reserve(request),

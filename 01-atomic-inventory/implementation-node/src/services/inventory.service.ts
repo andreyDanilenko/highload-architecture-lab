@@ -25,6 +25,10 @@ export class InventoryService implements IInventoryService {
 		private pool: Pool,
 	) {}
 
+	/**
+	 * Naive reserve: read-modify-write without lock. Race condition under concurrency.
+	 * @deprecated Demo/load-test only. Use reserveStockPessimistic in production.
+	 */
 	async reserveStock(dto: CreateTransactionDTO): Promise<ReserveResult> {
 		const existingTx = await this.transactionRepo.findByRequestId(
 			dto.requestId,
@@ -158,6 +162,9 @@ export class InventoryService implements IInventoryService {
 		return stock >= quantity;
 	}
 
+	/**
+	 * @deprecated Not implemented. Do not use in production until compensation/rollback is implemented.
+	 */
 	async releaseStock(dto: CreateTransactionDTO): Promise<ReserveResult> {
 		// TODO: compensation / rollback implementation
 		throw new Error("Method not implemented");

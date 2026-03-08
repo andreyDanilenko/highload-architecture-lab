@@ -52,6 +52,10 @@ export class ProductRepository implements IProductRepository {
 		}
 	}
 
+	/**
+	 * No locking — race condition under concurrency. For demo/load-test only.
+	 * @deprecated Do not use in production.
+	 */
 	async updateStockNaive(sku: string, newQuantity: number): Promise<boolean> {
 		try {
 			const { rowCount } = await this.pool.query(

@@ -30,10 +30,8 @@ export interface IProductRepository {
 	): Promise<boolean>;
 
 	/**
-	 * Update stock without any locking (naive approach - for race condition demo)
-	 * @param sku - product SKU
-	 * @param newQuantity - new stock quantity
-	 * @returns true if updated
+	 * Update stock without any locking. Race condition under concurrency — lost updates.
+	 * @deprecated For demo/load-test only. Do not use in production. Use updateStockWithClient (in tx) or updateStock (optimistic).
 	 */
 	updateStockNaive(sku: string, newQuantity: number): Promise<boolean>;
 
