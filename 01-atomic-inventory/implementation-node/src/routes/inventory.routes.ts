@@ -4,13 +4,13 @@ import { inventoryController } from '@/di/container';
 export async function inventoryRoutes(fastify: FastifyInstance) {
   // GET /inventory/stock/:sku
   fastify.get<{ Params: { sku: string } }>(
-    '/inventory/stock/:sku',
+    '/stock/:sku',
     async (request) => inventoryController.getStock(request)
   );
   
   // POST /inventory/reserve
   fastify.post<{ Body: { sku: string; quantity: number; requestId: string } }>(
-    '/inventory/reserve',
+    '/reserve',
     async (request) => inventoryController.reserve(request)
   );
 }
