@@ -1,53 +1,3 @@
-<<<<<<< HEAD
-# Redis: компенсирующая транзакция и план стабилизации
-
-Описание задачи, риски и план доработки стратегии 4 (Redis) без привязки к коду.
-
----
-
-## Задача (описание)
-
-Стратегия 4 (Redis) даёт максимальную скорость резерва за счёт атомарного списания в Redis, после чего результат синхронизируется в PostgreSQL. Чтобы система оставалась консистентной при сбоях, нужен **паттерн компенсирующей транзакции**:
-
-1. **Счастливый путь:** списали в Redis (атомарно) → сохранили транзакцию и обновили остаток в БД. Redis и PG совпадают.
-2. **Ошибка при записи в БД:** после успешного списания в Redis запись в PostgreSQL падает (таймаут, диск, deadlock). Без отката в Redis остаток в кеше будет меньше, чем в БД — рассинхрон. Поэтому в `catch` необходимо вернуть количество обратно в Redis (метод `increment(sku, quantity)`). Так откатывается только та операция, которая не зафиксировалась в БД.
-3. **Критический сбой:** если упали и Redis, и приложение (например, `increment` в `catch` не выполнился из‑за потери связи с Redis), консистентность восстанавливается **фоновой сверкой** (reconciliation): PostgreSQL — источник правды; воркер периодически сравнивает остатки в БД и Redis и при необходимости правит Redis. Итог — eventual consistency.
-
-Метод `increment` в хранилище Redis реализует откат (Redis `INCRBY`). Без него компенсирующая транзакция невозможна.
-
----
-
-## Потенциальные проблемы (Redis-стратегия)
-
-- **Падение `increment` в блоке `catch`** (нет связи с Redis, таймаут): компенсация не выполнится, Redis останется заниженным. Решение — reconciliation: фоновый процесс сверяет PG и Redis и выравнивает остатки; источник правды — БД.
-- **Двойной откат:** если по ошибке вызвать `increment` дважды для одной и той же неудавшейся операции, остаток в Redis станет завышенным. Нужна идемпотентность компенсации (например, запись в таблицу откатов по `requestId` или флаг в транзакции).
-- **Порядок операций:** компенсация должна вызываться только когда списание в Redis уже произошло, а запись в PG — нет. Иначе риск откатить то, что в БД не записывали.
-- **Синхронизация PG после Redis:** текущая реализация пишет в PG после каждого резерва. При очень высокой нагрузке можно рассмотреть батчирование или асинхронную запись в очередь с последующей записью в PG — с пониманием, что до момента записи PG будет отставать (читаем из Redis для резерва, из PG — для отчётов после сверки).
-
----
-
-## План стабилизации (реализации)
-
-Только перечень шагов, без кода.
-
-1. **Компенсирующая транзакция в резерве**  
-   В обработчике резерва (стратегия Redis): после успешного списания в Redis и создания записи в `inventory_transactions` выполнить обновление остатка в PG. При любой ошибке на этапе записи в PG вызвать откат в Redis (`increment`). Убедиться, что откат вызывается не более одного раза на одну неудавшуюся операцию (идемпотентность компенсации).
-
-2. **Логирование и мониторинг**  
-   Логировать каждый вызов компенсации (sku, quantity, requestId, причина ошибки PG). Метрики: количество компенсаций в единицу времени, ошибки при вызове `increment`. Алерты при росте числа компенсаций или при сбоях `increment`.
-
-3. **Reconciliation (сверка)**  
-   Фоновый воркер по расписанию: для каждого продукта (или по списку SKU с активным остатком в Redis) прочитать `stock_quantity` из PG и значение из Redis. Если значение в Redis меньше, чем в PG — выставить в Redis значение из PG. Если больше — по политике: либо выровнять по PG (источник правды), либо залогировать расхождение. Результаты сверки логировать.
-
-4. **Обработка падения `increment`**  
-   Если в момент компенсации Redis недоступен: залогировать неудачную компенсацию, записать в таблицу «pending_rollbacks» или в очередь. Отдельный процесс периодически повторяет попытки `increment` по этим записям. Reconciliation со временем исправит остаток в Redis даже если часть откатов не выполнится.
-
-5. **Тесты**  
-   Сценарий «Redis списал успешно, запись в PG падает» — проверка, что вызывается откат и остаток в Redis восстанавливается. Сценарий «откат в catch тоже падает» — проверка, что состояние логируется и/или попадает в очередь отложенной компенсации; при следующем запуске reconciliation или воркера откатов консистентность восстанавливается.
-
-6. **Документация и runbook**  
-   Описать: когда срабатывает компенсация, как читать логи и метрики, что делать при массовых расхождениях. Краткий runbook на случай длительной недоступности Redis (временный переход на pessimistic/optimistic, полная сверка после восстановления Redis).
-=======
 # Redis: Compensating Transaction and Stabilization Plan
 
 Description of the task, risks, and plan for improving strategy 4 (Redis) without tying it to code.
@@ -89,11 +39,51 @@ Steps only, no code.
    Scheduled background worker: for each product (or list of SKUs with active stock in Redis) read `stock_quantity` from PG and the value from Redis. If Redis is less than PG — set Redis to the PG value. If greater — by policy: either align to PG (source of truth) or log the discrepancy. Log reconciliation results.
 
 4. **Handling `increment` failure**  
-   If Redis is unavailable at compensation time: log the failed compensation, write to a “pending_rollbacks” table or queue. A separate process periodically retries `increment` for these entries. Reconciliation will eventually fix Redis stock even if some rollbacks never succeed.
+   If Redis is unavailable at compensation time: log the failed compensation, write to a "pending_rollbacks" table or queue. A separate process periodically retries `increment` for these entries. Reconciliation will eventually fix Redis stock even if some rollbacks never succeed.
 
 5. **Tests**  
-   Scenario “Redis decremented successfully, PG write fails” — assert that rollback is called and Redis stock is restored. Scenario “rollback in catch also fails” — assert that state is logged and/or enqueued for deferred compensation; on the next run of reconciliation or the rollback worker, consistency is restored.
+   Scenario "Redis decremented successfully, PG write fails" — assert that rollback is called and Redis stock is restored. Scenario "rollback in catch also fails" — assert that state is logged and/or enqueued for deferred compensation; on the next run of reconciliation or the rollback worker, consistency is restored.
 
 6. **Documentation and runbook**  
    Describe: when compensation runs, how to read logs and metrics, what to do on mass discrepancies. Short runbook for prolonged Redis unavailability (temporary switch to pessimistic/optimistic, full reconciliation after Redis is back).
->>>>>>> ab9d472 (feat(01-atomic-inventory): Redis compensating transaction, DI refactor, stabilization doc)
+
+---
+
+## Production strategy summary
+
+| Step | Path | Action |
+|------|------|--------|
+| 1 | Happy path | Decrement in Redis (fast) → persist transaction and update stock in DB (reliable). Redis and PG match. |
+| 2 | DB error | Catch failure → call `increment(sku, quantity)` in Redis (rollback). |
+| 3 | Critical failure | If everything fails (e.g. `increment` in catch fails) → scheduled reconciliation restores consistency (PG is source of truth). |
+
+---
+
+## Interview deep dive: "What if `increment` in the catch block also fails?"
+
+**Example question:** "What if Redis is down or the connection is lost when we try to roll back in `catch`?"
+
+**Senior-level answer:**
+
+> This is a classic distributed-systems problem. In that case we rely on **reconciliation**. PostgreSQL is our source of truth. A background worker runs on a schedule and compares stock in the DB with stock in Redis. If Redis has less than the DB (e.g. we never managed to run `increment`), the worker corrects Redis. That way we achieve **eventual consistency**: after the next reconciliation run, Redis and PG are aligned again.
+
+---
+
+## Data flow checklist (reserve via Redis)
+
+1. **Reserve request** → idempotency check (e.g. by `requestId`).
+2. **Redis:** `decrementIfSufficientOrInit(sku, pgStock, quantity)` → new balance or `null` (insufficient).
+3. If `null` → return "insufficient stock".
+4. **PG (single DB transaction):** create row in `inventory_transactions`, update `products.stock_quantity` to `newBalance` (sync). Both must succeed or both roll back.
+5. If step 4 throws → **catch:** call `increment(sku, quantity)` to roll back Redis; then rethrow.
+6. **Reconciliation (scheduled):** PG vs Redis; if Redis &lt; PG → set Redis to PG value.
+
+---
+
+## Sync and desync (списания и расхождение)
+
+- **Списание (decrement)** происходит только в Redis (атомарно). Затем результат **синкается в PG**: запись в `inventory_transactions` и обновление `products.stock_quantity` до `newBalance`.
+- **Потенциальное расхождение:** если после успешного списания в Redis запись в PG не удалась (или выполнилась только частично — транзакция есть, а `stock_quantity` не обновлён), Redis будет меньше, чем PG — десинхрон. Поэтому:
+  1. Оба шага PG (create transaction + update stock) выполняются в **одной транзакции БД** — либо оба успешны, либо оба откатываются.
+  2. При любой ошибке на этапе PG вызывается **компенсация**: `increment(sku, quantity)` в Redis, чтобы вернуть списанное количество.
+- Так мы избегаем ситуации «списали в Redis, в PG не записали и не откатили».

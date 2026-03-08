@@ -1,4 +1,4 @@
-import type { Pool, PoolClient } from "../../../node_modules/@types/pg";
+import type { Pool, PoolClient } from "pg";
 
 export async function withTransaction<T>(
 	pool: Pool,

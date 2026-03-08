@@ -1,4 +1,4 @@
-import type { Pool } from "../../node_modules/@types/pg";
+import type { Pool } from "pg";
 import { Product } from "@/models/product";
 import { CreateTransactionDTO } from "@/models/transaction";
 import {
@@ -181,6 +181,7 @@ export class InventoryService implements IInventoryService {
 
 	/**
 	 * Reserve stock using Redis atomic counter; persist to PostgreSQL.
+	 * On any PG write failure, rolls back Redis via increment (compensating transaction).
 	 */
 	async reserveStockRedis(dto: CreateTransactionDTO): Promise<ReserveResult> {
 		const idempotent = await this.resolveIdempotentReserve(dto);
@@ -202,11 +203,31 @@ export class InventoryService implements IInventoryService {
 			throw new InsufficientStockError(dto.sku, dto.quantity, current ?? 0);
 		}
 
-		const transaction = await this.transactionRepo.create(dto);
-		// Sync PG so getBalance and other strategies stay consistent
-		await this.productRepo.updateStockNaive(dto.sku, newBalance);
-
-		return this.successResult(newBalance, transaction);
+		try {
+			return await withTransaction(this.pool, async (client) => {
+				const transaction = await this.transactionRepo.createWithClient(
+					client,
+					dto,
+				);
+				// Sync PG stock so getBalance and reconciliation stay consistent
+				const updated = await this.productRepo.updateStockWithClient(
+					client,
+					dto.sku,
+					newBalance,
+				);
+				if (!updated) {
+					throw new BusinessError("Failed to sync stock to PG", "UPDATE_FAILED", {
+						sku: dto.sku,
+						newBalance,
+					});
+				}
+				return this.successResult(newBalance, transaction);
+			});
+		} catch (err) {
+			// Compensating transaction: PG write failed — restore Redis
+			await this.redisStore.increment(dto.sku, dto.quantity);
+			throw err;
+		}
 	}
 
 	async getBalance(sku: string): Promise<number> {

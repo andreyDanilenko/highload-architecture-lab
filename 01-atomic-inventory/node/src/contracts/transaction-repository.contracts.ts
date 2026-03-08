@@ -1,4 +1,4 @@
-import type { PoolClient } from "../../node_modules/@types/pg";
+import type { PoolClient } from "pg";
 import {
 	InventoryTransaction,
 	CreateTransactionDTO,
