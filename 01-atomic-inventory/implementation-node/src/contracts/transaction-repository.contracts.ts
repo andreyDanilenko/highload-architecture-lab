@@ -1,3 +1,4 @@
+import type { PoolClient } from "pg";
 import {
 	InventoryTransaction,
 	CreateTransactionDTO,
@@ -10,6 +11,15 @@ export interface ITransactionRepository {
 	 * @returns created transaction
 	 */
 	create(transaction: CreateTransactionDTO): Promise<InventoryTransaction>;
+
+	/**
+	 * Create transaction record using existing transaction client.
+	 * Must be called inside a transaction. Throws DuplicateRequestError on unique violation.
+	 */
+	createWithClient(
+		client: PoolClient,
+		transaction: CreateTransactionDTO,
+	): Promise<InventoryTransaction>;
 
 	/**
 	 * Find transaction by requestId (for idempotency)

@@ -38,4 +38,21 @@ export class InventoryController {
 			newBalance: result.newBalance,
 		};
 	}
+
+	async reservePessimistic(request: FastifyRequest<{ Body: ReserveRequest }>) {
+		const body = reserveSchema.parse(request.body);
+		request.log.debug({ body }, "Processing reservation (pessimistic)");
+
+		const result = await this.inventoryService.reserveStockPessimistic({
+			sku: body.sku,
+			quantity: body.quantity,
+			requestId: body.requestId,
+		});
+
+		return {
+			success: true,
+			duplicated: result.duplicated,
+			newBalance: result.newBalance,
+		};
+	}
 }

@@ -10,6 +10,7 @@ export const transactionRepo = new TransactionRepository(pgPool);
 export const inventoryService = new InventoryService(
 	productRepo,
 	transactionRepo,
+	pgPool,
 );
 
 export const inventoryController = new InventoryController(inventoryService);

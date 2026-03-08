@@ -12,4 +12,10 @@ export async function inventoryRoutes(fastify: FastifyInstance) {
 		"/reserve",
 		async (request) => inventoryController.reserve(request),
 	);
+
+	// POST /inventory/reserve/pessimistic
+	fastify.post<{ Body: { sku: string; quantity: number; requestId: string } }>(
+		"/reserve/pessimistic",
+		async (request) => inventoryController.reservePessimistic(request),
+	);
 }

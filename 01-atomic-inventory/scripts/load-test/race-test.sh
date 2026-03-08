@@ -1,6 +1,11 @@
 #!/bin/bash
+# Usage: ./race-test.sh [BASE_URL] [RESERVE_ENDPOINT]
+# Example: ./race-test.sh
+#          ./race-test.sh http://localhost:3000
+#          ./race-test.sh http://localhost:3000 /api/v1/inventory/reserve/pessimistic
 
 BASE_URL=${1:-"http://localhost:3000"}
+RESERVE_PATH=${2:-"/api/v1/inventory/reserve"}
 TOTAL_REQUESTS=100
 PRODUCT_SKU="SKU-TEST-001"
 
@@ -10,8 +15,11 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
+RESERVE_URL="${BASE_URL}${RESERVE_PATH}"
 echo -e "${YELLOW}🚀 Race Condition Test${NC}"
 echo "======================"
+echo "   Endpoint: POST $RESERVE_URL"
+echo ""
 
 INITIAL_STOCK=$(curl -s "$BASE_URL/api/v1/inventory/stock/$PRODUCT_SKU" | jq -r '.stock')
 echo -e "📦 Initial stock: ${GREEN}$INITIAL_STOCK${NC}"
@@ -22,20 +30,18 @@ SUCCESS=0
 FAIL=0
 
 for i in $(seq 1 $TOTAL_REQUESTS); do
-  # Use uuidgen for REAL UUID v4
   REQUEST_ID=$(uuidgen)
-  
   STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-    -X POST "$BASE_URL/api/v1/inventory/reserve" \
+    -X POST "$RESERVE_URL" \
     -H "Content-Type: application/json" \
     -d "{\"sku\":\"$PRODUCT_SKU\",\"quantity\":1,\"requestId\":\"$REQUEST_ID\"}")
-  
+
   if [ "$STATUS" = "200" ]; then
     SUCCESS=$((SUCCESS + 1))
   else
     FAIL=$((FAIL + 1))
   fi
-  
+
   if [ $((i % 10)) -eq 0 ]; then
     echo -n "."
   fi
@@ -46,17 +52,18 @@ echo -e "\n✅ All requests completed"
 
 sleep 1
 FINAL_STOCK=$(curl -s "$BASE_URL/api/v1/inventory/stock/$PRODUCT_SKU" | jq -r '.stock')
-EXPECTED_STOCK=$((INITIAL_STOCK - TOTAL_REQUESTS))
+EXPECTED_STOCK=$((INITIAL_STOCK - SUCCESS))
 
 echo -e "\n📊 Results:"
 echo "   Successful: $SUCCESS"
 echo "   Failed: $FAIL"
-echo "   Expected stock: $EXPECTED_STOCK"
+echo "   Expected stock (initial - success): $EXPECTED_STOCK"
 echo "   Actual stock:   $FINAL_STOCK"
 
 if [ "$FINAL_STOCK" -eq "$EXPECTED_STOCK" ]; then
-  echo -e "${GREEN}✅ No race condition detected${NC}"
+  echo -e "${GREEN}✅ No race condition — stock consistent${NC}"
 else
-  LOST=$((EXPECTED_STOCK - FINAL_STOCK))
+  # More stock left than expected = some successful reserves didn't deduct
+  LOST=$((FINAL_STOCK - EXPECTED_STOCK))
   echo -e "${RED}❌ Race condition detected! Lost $LOST updates${NC}"
 fi

@@ -22,6 +22,11 @@ export interface IInventoryService {
 	reserveStock(dto: CreateTransactionDTO): Promise<ReserveResult>;
 
 	/**
+	 * Reserve stock using pessimistic locking (SELECT FOR UPDATE in a single transaction).
+	 */
+	reserveStockPessimistic(dto: CreateTransactionDTO): Promise<ReserveResult>;
+
+	/**
 	 * Release previously reserved stock (compensation)
 	 * @param dto - transaction data
 	 * @returns ReserveResult with status

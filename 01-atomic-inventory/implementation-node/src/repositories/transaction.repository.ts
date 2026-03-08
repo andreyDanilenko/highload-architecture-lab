@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import { Pool, type PoolClient } from "pg";
 import {
 	InventoryTransaction,
 	CreateTransactionDTO,
@@ -46,6 +46,32 @@ export class TransactionRepository implements ITransactionRepository {
 			}
 
 			throw new DatabaseError("TransactionRepository.create", {
+				cause: error,
+				transaction,
+			});
+		}
+	}
+
+	/**
+	 * Create transaction record using existing client (inside a transaction).
+	 */
+	async createWithClient(
+		client: PoolClient,
+		transaction: CreateTransactionDTO,
+	): Promise<InventoryTransaction> {
+		try {
+			const { rows } = await client.query<TransactionRow>(
+				`INSERT INTO inventory_transactions (sku, quantity, request_id) 
+             VALUES ($1, $2, $3) 
+             RETURNING *`,
+				[transaction.sku, transaction.quantity, transaction.requestId],
+			);
+			return this.mapToEntity(rows[0]);
+		} catch (error) {
+			if (isPostgresError(error) && error.code === "23505") {
+				throw new DuplicateRequestError(transaction.requestId, transaction.sku);
+			}
+			throw new DatabaseError("TransactionRepository.createWithClient", {
 				cause: error,
 				transaction,
 			});

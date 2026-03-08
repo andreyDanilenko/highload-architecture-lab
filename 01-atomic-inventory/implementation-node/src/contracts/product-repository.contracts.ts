@@ -1,3 +1,4 @@
+import type { PoolClient } from "pg";
 import { Product, CreateProductDTO } from "@/models/product";
 
 export interface IProductRepository {
@@ -50,4 +51,20 @@ export interface IProductRepository {
 	 * @returns true if exists
 	 */
 	exists(sku: string): Promise<boolean>;
+
+	/**
+	 * Find product by SKU and lock row for update (pessimistic locking).
+	 * Must be called inside a transaction (same client).
+	 */
+	findBySkuWithLock(client: PoolClient, sku: string): Promise<Product | null>;
+
+	/**
+	 * Update stock using existing transaction client.
+	 * Must be called inside a transaction after findBySkuWithLock.
+	 */
+	updateStockWithClient(
+		client: PoolClient,
+		sku: string,
+		newQuantity: number,
+	): Promise<boolean>;
 }

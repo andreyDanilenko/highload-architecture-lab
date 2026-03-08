@@ -1,4 +1,4 @@
-import { Pool } from "pg";
+import { Pool, type PoolClient } from "pg";
 import { Product, CreateProductDTO } from "@/models/product";
 import { IProductRepository } from "@/contracts/product-repository.contracts";
 import { DatabaseError, BusinessError } from "@/shared/errors/app-errors";
@@ -111,6 +111,50 @@ export class ProductRepository implements IProductRepository {
 			throw new DatabaseError("ProductRepository.exists", {
 				cause: error,
 				sku,
+			});
+		}
+	}
+
+	/**
+	 * Lock row for update (pessimistic). Use inside a transaction.
+	 */
+	async findBySkuWithLock(
+		client: PoolClient,
+		sku: string,
+	): Promise<Product | null> {
+		try {
+			const { rows } = await client.query<ProductRow>(
+				"SELECT * FROM products WHERE sku = $1 FOR UPDATE",
+				[sku],
+			);
+			return rows.length === 0 ? null : this.mapToEntity(rows[0]);
+		} catch (error) {
+			throw new DatabaseError("ProductRepository.findBySkuWithLock", {
+				cause: error,
+				sku,
+			});
+		}
+	}
+
+	/**
+	 * Update stock using transaction client. Use after findBySkuWithLock.
+	 */
+	async updateStockWithClient(
+		client: PoolClient,
+		sku: string,
+		newQuantity: number,
+	): Promise<boolean> {
+		try {
+			const { rowCount } = await client.query(
+				`UPDATE products SET stock_quantity = $1, updated_at = NOW() WHERE sku = $2`,
+				[newQuantity, sku],
+			);
+			return (rowCount ?? 0) > 0;
+		} catch (error) {
+			throw new DatabaseError("ProductRepository.updateStockWithClient", {
+				cause: error,
+				sku,
+				newQuantity,
 			});
 		}
 	}
