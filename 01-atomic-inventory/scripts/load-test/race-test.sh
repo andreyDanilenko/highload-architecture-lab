@@ -6,7 +6,7 @@
 
 BASE_URL=${1:-"http://localhost:3000"}
 RESERVE_PATH=${2:-"/api/v1/inventory/reserve"}
-TOTAL_REQUESTS=500
+TOTAL_REQUESTS=100
 PRODUCT_SKU="SKU-TEST-001"
 
 # Colors
@@ -24,6 +24,9 @@ echo ""
 INITIAL_STOCK=$(curl -s "$BASE_URL/api/v1/inventory/stock/$PRODUCT_SKU" | jq -r '.stock' | tr -d '\n\r')
 INITIAL_STOCK=${INITIAL_STOCK:-0}
 echo -e "📦 Initial stock: ${GREEN}$INITIAL_STOCK${NC}"
+if [ "${INITIAL_STOCK:-0}" -eq 0 ]; then
+  echo -e "${YELLOW}⚠️  Tip: run ../reset-db.sh first (with Docker running) to set stock to 1000.${NC}"
+fi
 
 echo -e "\n📨 Sending $TOTAL_REQUESTS concurrent requests (in parallel)..."
 

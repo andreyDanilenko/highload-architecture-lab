@@ -54,13 +54,16 @@ Step-by-step plans per subtask are in `docs/`:
 
 ## Running (shared for Node and Go)
 
+**→ [COMMANDS.md](COMMANDS.md)** — all commands and where `.env` lives.
+
 Infrastructure lives in this folder (`01-atomic-inventory`): Docker Compose, init SQL, Makefile.
 
-**1. Env (for Docker)**
+**1. Env (one file for Docker + Node/Go)**
+
+One `.env` in this folder (`01-atomic-inventory`) is used by Docker Compose and by the Node app (and later Go). `make infra-up` creates it from `env.example` if missing.
 
 ```bash
-cp env.example .env
-# .env: DB_USER, DB_PASSWORD, DB_NAME, DB_PORT
+cp env.example .env   # or edit .env: DB_*, PORT, REDIS_*, etc.
 ```
 
 **2. Start Postgres and Redis**

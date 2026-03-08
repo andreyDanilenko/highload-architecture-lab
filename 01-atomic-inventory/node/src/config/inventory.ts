@@ -14,7 +14,6 @@ const parsed = maxRetriesSchema.safeParse(raw);
 const maxOptimisticRetries = parsed.success ? parsed.data : 10;
 
 export const inventoryConfig = {
-	/** Max retries for optimistic locking when version conflict occurs. */
 	maxOptimisticRetries,
 } as const;
 

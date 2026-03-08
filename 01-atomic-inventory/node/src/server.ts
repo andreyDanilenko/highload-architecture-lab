@@ -1,8 +1,6 @@
-import dotenv from "dotenv";
+import "./load-env";
 import { pgPool, redisClient, connectRedis } from "@/config";
 import { buildApp } from "@/app";
-
-dotenv.config();
 
 const fastify = buildApp();
 

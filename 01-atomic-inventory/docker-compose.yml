@@ -1,3 +1,4 @@
+# Run from this directory (01-atomic-inventory) so ./init.sql resolves. Use: make infra-up
 version: '3.8'
 
 services:

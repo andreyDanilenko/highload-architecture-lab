@@ -19,7 +19,7 @@ Infrastructure (Docker, Postgres, Redis, DB reset) is shared and run from the pa
 
 ```bash
 npm install
-cp env.example.sh .env   # or copy key=value lines into .env
+# Optional: copy env.example.sh to node/.env for local overrides. Default: app loads ../.env (01-atomic-inventory/.env).
 ```
 
 From **01-atomic-inventory** (parent folder) start infra and reset DB, then run the app:
@@ -45,7 +45,7 @@ Server: **http://localhost:3000**. Health: http://localhost:3000/health.
 
 ## Environment
 
-Create `.env` in this folder (e.g. from `env.example.sh`). Main variables:
+The app loads **`01-atomic-inventory/.env`** first (shared with Docker Compose), then **`node/.env`** if present (overrides). So one `.env` in the project root is enough; optional `node/.env` for local overrides. Main variables:
 
 - `PORT` — server port (default 3000)
 - `HOST` — listen address (default 0.0.0.0)

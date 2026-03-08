@@ -1,4 +1,5 @@
-import { FastifyInstance, FastifyRequest } from "fastify";
+import type { FastifyRequest } from "fastify";
+import type { AppFastifyInstance } from "@/types/app-instance";
 import { z, ZodError } from "zod";
 import { AppError } from "@/shared/errors/app-errors";
 
@@ -76,7 +77,7 @@ function buildErrorPayload(
 	};
 }
 
-export function setupErrorHandler(fastify: FastifyInstance) {
+export function setupErrorHandler(fastify: AppFastifyInstance) {
 	fastify.setErrorHandler((error, request, reply) => {
 		request.log.error(
 			{
