@@ -1,250 +1,59 @@
 # Task 01: Atomic Inventory Counter
 
-## 1. Objective
-Implement a fault-tolerant inventory deduction system that handles thousands of concurrent requests without race conditions or overselling.
+Implement a reservation system that handles thousands of concurrent requests without going negative or losing updates (race condition).
 
-## 2. Core Problem
-When multiple threads or application instances access the same database row simultaneously, a race condition occurs:
+---
+
+## Problem
+
+Multiple threads or instances read the same stock, subtract, and write back — some deductions overwrite each other and are "lost":
 
 ```
 Thread 1: Read stock = 5
 Thread 2: Read stock = 5
 Thread 1: Write stock = 4
-Thread 2: Write stock = 4  ❌ One unit lost
+Thread 2: Write stock = 4   ← one unit lost
 ```
 
-**Critical requirement:** `stock_quantity` must never become negative, no matter how many concurrent requests hit the system.
-
-### 2.1 Path from problem to best practices
-
-```
-PROBLEM → UNDERSTANDING → SOLUTION → BEST PRACTICE
-```
-
-| Scenario | What we see | Takeaway |
-|----------|-------------|----------|
-| **1. Naive** | Race condition, lost updates. Stock 1000, 100 requests → 915 (lost 15) | Don't do this! |
-| **2. Pessimistic** | `SELECT FOR UPDATE`, transactions. 1000 → 900 | Correct; cost: locks, slower |
-| **3. Optimistic** | `version` field, retry on conflict. 1000 → 900 | Correct; faster when contention is low |
-| **4. Redis** | Atomic in-memory ops, sync to DB. Very high RPS | Best for highload counters |
-
-**Comparison:**
-
-| Strategy   | 1000 → ? | Lost | Speed        |
-|-----------|----------|------|-------------|
-| Naive     | 915      | 85 ❌ | Fast        |
-| Pessimistic | 900    | 0 ✅  | Slower      |
-| Optimistic  | 900    | 0 ✅  | Fast        |
-| Redis     | 900      | 0 ✅  | Very fast   |
-
-Each scenario improves on the previous one: we first see the problem (naive), then learn locking (pessimistic), then versioning and retry (optimistic), then scale with Redis.
-
-## 3. Implementation Strategies
-Implement and compare three approaches in both Go and Node.js:
-
-### Strategy 1: Pessimistic Locking
-Use row-level locks in the database.
-
-```sql
-BEGIN;
-SELECT * FROM products WHERE id = $1 FOR UPDATE;
-UPDATE products SET stock = stock - $2 WHERE id = $1 AND stock >= $2;
-COMMIT;
-```
-
-### Strategy 2: Optimistic Locking
-Use version field and retry on conflict.
-
-```sql
-UPDATE products 
-SET stock = stock - $1, version = version + 1 
-WHERE id = $2 AND stock >= $1 AND version = $3;
-```
-
-### Strategy 3: Redis Atomic Counter
-Use Redis atomic operations with PostgreSQL persistence.
-
-```lua
--- Redis Lua script
-local current = redis.call('GET', KEYS[1])
-if tonumber(current) >= tonumber(ARGV[1]) then
-    redis.call('DECRBY', KEYS[1], ARGV[1])
-    return 1
-else
-    return 0
-end
-```
-
-## 4. Technical Requirements
-
-### Stack
-- Go 1.25+ / Node.js 24.14+
-- PostgreSQL 18.2
-- Redis 8.2
-- Docker + Docker Compose
-
-### Database Schema
-```sql
-CREATE TABLE products (
-    id SERIAL PRIMARY KEY,
-    sku VARCHAR(50) UNIQUE NOT NULL,
-    stock_quantity INT NOT NULL CHECK (stock_quantity >= 0),
-    version INT DEFAULT 0
-);
-
-CREATE TABLE inventory_transactions (
-    id SERIAL PRIMARY KEY,
-    sku VARCHAR(50) NOT NULL,
-    quantity INT NOT NULL,
-    request_id VARCHAR(255) UNIQUE,
-    created_at TIMESTAMP DEFAULT NOW()
-);
-
-INSERT INTO products (sku, stock_quantity) VALUES ('SKU-TEST-001', 1000);
-```
-
-### API Contract
-```http
-POST /api/v1/inventory/reserve
-{
-    "sku": "SKU-TEST-001",
-    "quantity": 1,
-    "requestId": "uuid-123"
-}
-```
-
-**Responses:**
-- `200 OK` - Reserved successfully
-- `409 Conflict` - Insufficient stock
-- `422 Unprocessable` - Invalid request
-
-## 5. Testing Requirements
-
-### Unit Tests
-- Idempotency: same requestId doesn't create duplicate deduction
-- Expired accruals excluded from balance
-- Concurrent deductions don't cause negative balance
-- Queue job idempotency
-
-### Load Tests
-- 100,000 requests against 1,000 items
-- Measure RPS, p95/p99 latency, error rate
-- Compare all three strategies
-
-## 6. Deliverables
-
-- [ ] Go implementation (all 3 strategies)
-- [ ] Node.js implementation (all 3 strategies)
-- [ ] Unit tests for critical scenarios
-- [ ] Load test scripts (k6/wrk)
-- [ ] Performance comparison in `/docs`
-- [ ] Docker Compose for local development
-
-## 7. Success Criteria
-- Final stock = 0 AND successful_requests = 1000
-- No negative stock in any test
-- All tests passing
-- Clear documentation of tradeoffs
+Requirement: `stock_quantity` must never go negative.
 
 ---
 
-# Задание 01: Atomic Inventory Counter
+## Task (overview)
 
-## 1. Цель
-Реализовать отказоустойчивую систему списания остатков товара, способную корректно обрабатывать тысячи конкурентных запросов без возникновения состояния гонки и ухода в минус.
+Implement and compare four reservation strategies:
 
-## 2. Основная проблема
-При одновременном доступе нескольких потоков или инстансов приложения к одной строке в базе данных возникает состояние гонки:
+1. **Naive** — read-modify-write with no locking. Used only to demonstrate the race (100 requests → some updates lost). Do not use in production.
+2. **Pessimistic** — row lock in the DB (`SELECT FOR UPDATE`) inside a single transaction. No lost updates; under high contention, slower.
+3. **Optimistic** — `version` column; update only if version matches, retry on conflict. No long-held locks; faster than pessimistic when contention is low.
+4. **Redis** — atomic counter in Redis (Lua), synced to PostgreSQL. Highest RPS; fits highload counters (stock, limits, views).
 
-```
-Поток 1: Читает stock = 5
-Поток 2: Читает stock = 5
-Поток 1: Записывает stock = 4
-Поток 2: Записывает stock = 4  ❌ Потеряна одна единица
-```
+Where this appears in production: e-commerce (reserve on checkout), seat/table booking, bonus deduction, billing limits.
 
-**Критическое требование:** `stock_quantity` никогда не должен становиться отрицательным, независимо от количества параллельных запросов.
+Step-by-step plans per subtask are in `docs/`:
 
-### 2.1 Путь от проблемы к лучшим практикам
+- [docs/subtask-1-naive.md](docs/subtask-1-naive.md) — race demo
+- [docs/subtask-2-pessimistic.md](docs/subtask-2-pessimistic.md) — SELECT FOR UPDATE
+- [docs/subtask-3-optimistic.md](docs/subtask-3-optimistic.md) — version + retry
+- [docs/subtask-4-redis.md](docs/subtask-4-redis.md) — Redis + PG
 
-```
-ПРОБЛЕМА → ПОНИМАНИЕ → РЕШЕНИЕ → BEST PRACTICE
-```
+---
 
-**Сценарий 1: Наивная реализация**
-- Демонстрирует проблему: race condition, потеря обновлений при конкурентных запросах.
-- Пример: Stock = 1000, 100 запросов → остаток 915 (потеряли 15 списаний).
-- Вывод: так делать нельзя.
+## Tech stack
 
-**Сценарий 2: Pessimistic Locking**
-- Решение через блокировку строки: `SELECT FOR UPDATE`, транзакции.
-- Запросы по одной строке выполняются последовательно.
-- Результат: 1000 → 900. Цена: блокировки, ниже пропускная способность.
+- **Runtime:** Node.js 20+ (reference implementation in `implementation-node`)
+- **Framework:** Fastify (routes, validation, error handler)
+- **Language:** TypeScript (tsx for dev)
+- **DB:** PostgreSQL 16+ — products, stock, version; transactions table (idempotency by `request_id`)
+- **Cache/counter:** Redis 7+ — atomic ops (Lua) for the Redis strategy
+- **Logging:** Pino (stdout + optional file)
+- **Validation:** Zod (request body)
+- **Infra:** Docker Compose (Postgres, Redis), DB reset and load-test scripts (bash, curl, jq)
 
-**Сценарий 3: Optimistic Locking**
-- Решение через версионность: поле `version`, retry при конфликте, без блокировок.
-- Результат: 1000 → 900. Плюс: быстрее при низкой конкуренции.
+---
 
-**Сценарий 4: Redis Counter**
-- Best practice для highload: атомарные операции в памяти, синхронизация с БД.
-- Максимальная скорость; типично для счётчиков (лайки, просмотры, остатки).
+## Database schema
 
-**Сравнение результатов:**
-
-| Стратегия     | 1000 → ? | Потеряно | Скорость      |
-|---------------|----------|----------|---------------|
-| Naive         | 915      | 85 ❌    | Быстро        |
-| Pessimistic   | 900      | 0 ✅     | Медленнее     |
-| Optimistic    | 900      | 0 ✅     | Быстро        |
-| Redis         | 900      | 0 ✅     | Очень быстро  |
-
-Каждый следующий сценарий — улучшение предыдущего: сначала видим проблему (naive), затем осваиваем блокировки (pessimistic), версионирование и retry (optimistic), затем масштабирование через Redis.
-
-## 3. Стратегии реализации
-Реализовать и сравнить три подхода на Go и Node.js:
-
-### Стратегия 1: Пессимистичная блокировка
-Использование блокировок строк на уровне базы данных.
-
-```sql
-BEGIN;
-SELECT * FROM products WHERE id = $1 FOR UPDATE;
-UPDATE products SET stock = stock - $2 WHERE id = $1 AND stock >= $2;
-COMMIT;
-```
-
-### Стратегия 2: Оптимистичная блокировка
-Использование поля версии и повторных попыток при конфликте.
-
-```sql
-UPDATE products 
-SET stock = stock - $1, version = version + 1 
-WHERE id = $2 AND stock >= $1 AND version = $3;
-```
-
-### Стратегия 3: Атомарный счетчик в Redis
-Использование атомарных операций Redis с сохранением в PostgreSQL.
-
-```lua
--- Redis Lua скрипт
-local current = redis.call('GET', KEYS[1])
-if tonumber(current) >= tonumber(ARGV[1]) then
-    redis.call('DECRBY', KEYS[1], ARGV[1])
-    return 1
-else
-    return 0
-end
-```
-
-## 4. Технические требования
-
-### Стек
-- Go 1.21+ / Node.js 20+
-- PostgreSQL 16
-- Redis 7.2
-- Docker + Docker Compose
-
-### Схема базы данных
 ```sql
 CREATE TABLE products (
     id SERIAL PRIMARY KEY,
@@ -260,49 +69,54 @@ CREATE TABLE inventory_transactions (
     request_id VARCHAR(255) UNIQUE,
     created_at TIMESTAMP DEFAULT NOW()
 );
-
-INSERT INTO products (sku, stock_quantity) VALUES ('SKU-TEST-001', 1000);
 ```
 
-### API Контракт
-```http
-POST /api/v1/inventory/reserve
-{
-    "sku": "SKU-TEST-001",
-    "quantity": 1,
-    "requestId": "uuid-123"
-}
-```
+Seed: one product `SKU-TEST-001` with stock 1000.
 
-**Ответы:**
-- `200 OK` - Успешно зарезервировано
-- `409 Conflict` - Недостаточно товара
-- `422 Unprocessable` - Невалидный запрос
+---
 
-## 5. Требования к тестированию
+## API
 
-### Модульные тесты
-- Идемпотентность: одинаковый requestId не создает повторное списание
-- Просроченные начисления исключены из баланса
-- Конкурентные списания не приводят к отрицательному балансу
-- Идемпотентность задач в очереди
+- `GET /api/v1/inventory/stock/:sku` — current stock (from PG).
+- `POST /api/v1/inventory/reserve` — naive (tests only).
+- `POST /api/v1/inventory/reserve/pessimistic` — transaction lock.
+- `POST /api/v1/inventory/reserve/optimistic` — version + retry.
+- `POST /api/v1/inventory/reserve/redis` — Redis atomic counter.
 
-### Нагрузочные тесты
-- 100,000 запросов на 1,000 единиц товара
-- Измерить RPS, p95/p99 задержку, процент ошибок
-- Сравнить все три стратегии
+Reserve body: `{ "sku": "SKU-TEST-001", "quantity": 1, "requestId": "uuid" }`.  
+Responses: 200 — success; 409 — insufficient stock; 404 — product not found; 422 — invalid body.
 
-## 6. Результаты
+---
 
-- [ ] Go реализация (все 3 стратегии)
-- [ ] Node.js реализация (все 3 стратегии)
-- [ ] Модульные тесты для критических сценариев
-- [ ] Скрипты нагрузочного тестирования (k6/wrk)
-- [ ] Сравнение производительности в `/docs`
-- [ ] Docker Compose для локальной разработки
+## Testing
 
-## 7. Критерии успеха
-- Итоговый остаток = 0 И успешных_запросов = 1000
-- Ни одного отрицательного остатка в любом тесте
-- Все тесты проходят
-- Понятная документация компромиссов
+**Unit:** Idempotency (same `requestId` does not create a second deduction); concurrent deductions never go negative; 409 when stock is insufficient.
+
+**Load:** Scripts in `scripts/load-test/`. Before each run, reset DB: `./scripts/reset-db.sh`. Then e.g.:
+
+- `./scripts/load-test/race-test-naive.sh` — expect lost updates (actual stock > initial - success).
+- `./scripts/load-test/race-test-pessimistic.sh`, `race-test-optimistic.sh`, `race-test-redis.sh` — expect consistency (actual = initial - success).
+
+Details and how to read results: [scripts/load-test/README.md](scripts/load-test/README.md).
+
+---
+
+## Logs
+
+The Node app logs with Pino: stdout and, when enabled, a file.
+
+- **Files:** `implementation-node/logs/`. Filename: `run-<ISO-timestamp>.log` (created on startup when file logging is on).
+- **File logging:** On by default when `NODE_ENV !== "test"` and `LOG_TO_FILE` is not `"0"`.
+- **Level:** `LOG_LEVEL` (e.g. `info`, `debug`). Default `info`.
+- **Disable file:** set `LOG_TO_FILE=0` when starting the app.
+
+---
+
+## Deliverables (checklist)
+
+- All four strategies implemented (e.g. in Node under `implementation-node/`).
+- Idempotency by `requestId` on every reserve endpoint.
+- Load-test scripts: DB reset + race-test per strategy; naive shows lost updates; pessimistic, optimistic, redis show no loss.
+- Docker Compose for Postgres and Redis; short docs in README and step-by-step plans in `docs/`.
+
+Success criterion for correct strategies: 100 successful requests of 1 unit each → final stock exactly 100 less than initial; no negative stock in any test.
