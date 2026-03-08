@@ -26,6 +26,11 @@ export interface IInventoryService {
 	reserveStockPessimistic(dto: CreateTransactionDTO): Promise<ReserveResult>;
 
 	/**
+	 * Reserve stock using optimistic locking (version field, retry on conflict).
+	 */
+	reserveStockOptimistic(dto: CreateTransactionDTO): Promise<ReserveResult>;
+
+	/**
 	 * Release previously reserved stock (compensation).
 	 * @deprecated Not implemented. Do not use in production until implemented.
 	 */

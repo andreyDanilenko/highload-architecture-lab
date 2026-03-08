@@ -18,4 +18,10 @@ export async function inventoryRoutes(fastify: FastifyInstance) {
 		"/reserve/pessimistic",
 		async (request) => inventoryController.reservePessimistic(request),
 	);
+
+	// POST /inventory/reserve/optimistic
+	fastify.post<{ Body: { sku: string; quantity: number; requestId: string } }>(
+		"/reserve/optimistic",
+		async (request) => inventoryController.reserveOptimistic(request),
+	);
 }

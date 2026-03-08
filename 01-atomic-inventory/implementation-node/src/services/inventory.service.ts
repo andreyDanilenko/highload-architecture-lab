@@ -149,6 +149,72 @@ export class InventoryService implements IInventoryService {
 		});
 	}
 
+	/** Max retries for optimistic locking when version conflict occurs. */
+	private static readonly MAX_OPTIMISTIC_RETRIES = 10;
+
+	/**
+	 * Reserve stock using optimistic locking: read version, update with version check, retry on conflict.
+	 */
+	async reserveStockOptimistic(
+		dto: CreateTransactionDTO,
+	): Promise<ReserveResult> {
+		const existingTx = await this.transactionRepo.findByRequestId(
+			dto.requestId,
+		);
+		if (existingTx) {
+			if (existingTx.sku !== dto.sku || existingTx.quantity !== dto.quantity) {
+				throw new BusinessError(
+					"Request payload mismatch",
+					"PAYLOAD_MISMATCH",
+					{ requestId: dto.requestId, existing: existingTx, new: dto },
+				);
+			}
+			return {
+				success: true,
+				duplicated: true,
+				newBalance: await this.getBalance(dto.sku),
+			};
+		}
+
+		for (let attempt = 0; attempt < InventoryService.MAX_OPTIMISTIC_RETRIES; attempt++) {
+			const product = await this.productRepo.findBySku(dto.sku);
+			if (!product) {
+				throw new NotFoundError("Product", { sku: dto.sku });
+			}
+			if (product.stockQuantity < dto.quantity) {
+				throw new InsufficientStockError(
+					dto.sku,
+					dto.quantity,
+					product.stockQuantity,
+				);
+			}
+
+			const newQuantity = product.stockQuantity - dto.quantity;
+			const updated = await this.productRepo.updateStock(
+				dto.sku,
+				newQuantity,
+				product.version,
+			);
+
+			if (updated) {
+				const transaction = await this.transactionRepo.create(dto);
+				return {
+					success: true,
+					duplicated: false,
+					newBalance: newQuantity,
+					transaction,
+				};
+			}
+			// Version conflict — retry (re-read and try again)
+		}
+
+		throw new BusinessError(
+			"Optimistic lock: too many retries",
+			"OPTIMISTIC_RETRY_EXHAUSTED",
+			{ sku: dto.sku, requestId: dto.requestId },
+		);
+	}
+
 	async getBalance(sku: string): Promise<number> {
 		const stock = await this.productRepo.getStock(sku);
 		if (stock === null) {

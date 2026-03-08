@@ -15,6 +15,30 @@ Thread 2: Write stock = 4  ❌ One unit lost
 
 **Critical requirement:** `stock_quantity` must never become negative, no matter how many concurrent requests hit the system.
 
+### 2.1 Path from problem to best practices
+
+```
+PROBLEM → UNDERSTANDING → SOLUTION → BEST PRACTICE
+```
+
+| Scenario | What we see | Takeaway |
+|----------|-------------|----------|
+| **1. Naive** | Race condition, lost updates. Stock 1000, 100 requests → 915 (lost 15) | Don't do this! |
+| **2. Pessimistic** | `SELECT FOR UPDATE`, transactions. 1000 → 900 | Correct; cost: locks, slower |
+| **3. Optimistic** | `version` field, retry on conflict. 1000 → 900 | Correct; faster when contention is low |
+| **4. Redis** | Atomic in-memory ops, sync to DB. Very high RPS | Best for highload counters |
+
+**Comparison:**
+
+| Strategy   | 1000 → ? | Lost | Speed        |
+|-----------|----------|------|-------------|
+| Naive     | 915      | 85 ❌ | Fast        |
+| Pessimistic | 900    | 0 ✅  | Slower      |
+| Optimistic  | 900    | 0 ✅  | Fast        |
+| Redis     | 900      | 0 ✅  | Very fast   |
+
+Each scenario improves on the previous one: we first see the problem (naive), then learn locking (pessimistic), then versioning and retry (optimistic), then scale with Redis.
+
 ## 3. Implementation Strategies
 Implement and compare three approaches in both Go and Node.js:
 
@@ -140,6 +164,41 @@ POST /api/v1/inventory/reserve
 ```
 
 **Критическое требование:** `stock_quantity` никогда не должен становиться отрицательным, независимо от количества параллельных запросов.
+
+### 2.1 Путь от проблемы к лучшим практикам
+
+```
+ПРОБЛЕМА → ПОНИМАНИЕ → РЕШЕНИЕ → BEST PRACTICE
+```
+
+**Сценарий 1: Наивная реализация**
+- Демонстрирует проблему: race condition, потеря обновлений при конкурентных запросах.
+- Пример: Stock = 1000, 100 запросов → остаток 915 (потеряли 15 списаний).
+- Вывод: так делать нельзя.
+
+**Сценарий 2: Pessimistic Locking**
+- Решение через блокировку строки: `SELECT FOR UPDATE`, транзакции.
+- Запросы по одной строке выполняются последовательно.
+- Результат: 1000 → 900. Цена: блокировки, ниже пропускная способность.
+
+**Сценарий 3: Optimistic Locking**
+- Решение через версионность: поле `version`, retry при конфликте, без блокировок.
+- Результат: 1000 → 900. Плюс: быстрее при низкой конкуренции.
+
+**Сценарий 4: Redis Counter**
+- Best practice для highload: атомарные операции в памяти, синхронизация с БД.
+- Максимальная скорость; типично для счётчиков (лайки, просмотры, остатки).
+
+**Сравнение результатов:**
+
+| Стратегия     | 1000 → ? | Потеряно | Скорость      |
+|---------------|----------|----------|---------------|
+| Naive         | 915      | 85 ❌    | Быстро        |
+| Pessimistic   | 900      | 0 ✅     | Медленнее     |
+| Optimistic    | 900      | 0 ✅     | Быстро        |
+| Redis         | 900      | 0 ✅     | Очень быстро  |
+
+Каждый следующий сценарий — улучшение предыдущего: сначала видим проблему (naive), затем осваиваем блокировки (pessimistic), версионирование и retry (optimistic), затем масштабирование через Redis.
 
 ## 3. Стратегии реализации
 Реализовать и сравнить три подхода на Go и Node.js:
