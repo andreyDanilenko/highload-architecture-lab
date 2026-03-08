@@ -30,8 +30,8 @@ export interface IProductRepository {
 	): Promise<boolean>;
 
 	/**
-	 * Update stock without any locking. Race condition under concurrency — lost updates.
-	 * @deprecated For demo/load-test only. Do not use in production. Use updateStockWithClient (in tx) or updateStock (optimistic).
+	 * Simple UPDATE of stock (no lock/version). Safe when writing a known value (e.g. syncing PG after Redis reserve).
+	 * Do not use for read-modify-write under concurrency — use updateStockWithClient or updateStock (optimistic) instead.
 	 */
 	updateStockNaive(sku: string, newQuantity: number): Promise<boolean>;
 

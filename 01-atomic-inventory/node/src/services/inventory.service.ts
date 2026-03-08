@@ -39,11 +39,11 @@ export class InventoryService implements IInventoryService {
 		);
 		if (!existingTx) return null;
 		if (existingTx.sku !== dto.sku || existingTx.quantity !== dto.quantity) {
-			throw new BusinessError(
-				"Request payload mismatch",
-				"PAYLOAD_MISMATCH",
-				{ requestId: dto.requestId, existing: existingTx, new: dto },
-			);
+			throw new BusinessError("Request payload mismatch", "PAYLOAD_MISMATCH", {
+				requestId: dto.requestId,
+				existing: existingTx,
+				new: dto,
+			});
 		}
 		return {
 			success: true,
@@ -72,9 +72,7 @@ export class InventoryService implements IInventoryService {
 	/** Build success result for a new (non-duplicate) reservation. */
 	private successResult(
 		newBalance: number,
-		transaction: Awaited<
-			ReturnType<ITransactionRepository["create"]>
-		>,
+		transaction: Awaited<ReturnType<ITransactionRepository["create"]>>,
 	): ReserveResult {
 		return {
 			success: true,
@@ -152,7 +150,11 @@ export class InventoryService implements IInventoryService {
 		const idempotent = await this.resolveIdempotentReserve(dto);
 		if (idempotent) return idempotent;
 
-		for (let attempt = 0; attempt < this.config.maxOptimisticRetries; attempt++) {
+		for (
+			let attempt = 0;
+			attempt < this.config.maxOptimisticRetries;
+			attempt++
+		) {
 			const product = await this.productRepo.findBySku(dto.sku);
 			this.validateReserveQuantity(product, dto);
 
@@ -197,11 +199,7 @@ export class InventoryService implements IInventoryService {
 		);
 		if (newBalance === null) {
 			const current = await this.redisStore.get(dto.sku);
-			throw new InsufficientStockError(
-				dto.sku,
-				dto.quantity,
-				current ?? 0,
-			);
+			throw new InsufficientStockError(dto.sku, dto.quantity, current ?? 0);
 		}
 
 		const transaction = await this.transactionRepo.create(dto);

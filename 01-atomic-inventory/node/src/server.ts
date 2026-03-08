@@ -24,6 +24,7 @@ async function start() {
 	}
 }
 
+/** Graceful shutdown: close HTTP, then DB pool and Redis so no connections are left open. */
 async function gracefulShutdown(signal: string) {
 	console.log(`\n🛑 Received ${signal}, shutting down...`);
 	await fastify.close();

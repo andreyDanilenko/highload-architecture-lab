@@ -25,4 +25,11 @@ export interface IRedisStockStore {
 		initialValue: number,
 		quantity: number,
 	): Promise<number | null>;
+
+	/**
+	 * Atomically add quantity to stock (Redis INCRBY). Used for compensating transaction:
+	 * if PG write fails after Redis decrement, call increment to restore Redis counter.
+	 * @returns new balance after increment.
+	 */
+	increment(sku: string, quantity: number): Promise<number>;
 }

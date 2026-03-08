@@ -147,6 +147,19 @@ The Node app logs with Pino: stdout and, when enabled, a file.
 
 ---
 
+## Problems and limitations per strategy
+
+| Strategy    | Main problems / risks |
+|------------|------------------------|
+| **Naive**  | Lost updates under concurrency (read–modify–write without lock). Risk of oversell. Use only for demos/load-test, not production. |
+| **Pessimistic** | High load on DB: row locks block other transactions; under contention, latency grows. Deadlocks possible if order of locking differs across requests. No lost updates; strong consistency. |
+| **Optimistic** | Retries under contention (version conflict) increase latency; many concurrent updates to same SKU can exhaust `maxOptimisticRetries`. No long-held locks; good when conflict rate is low. |
+| **Redis**  | Two sources of truth (Redis + PG): if PG write fails after Redis decrement, Redis stays ahead and becomes inconsistent. Requires compensating transaction (rollback in Redis) and/or reconciliation. If Redis is down, reserve path fails unless fallback to another strategy. |
+
+Подробнее по Redis: описание компенсирующей транзакции, риски и **план стабилизации** (без кода) — [docs/redis-stabilization-plan.md](docs/redis-stabilization-plan.md).
+
+---
+
 ## Deliverables (checklist)
 
 - All four strategies implemented (e.g. in Node under `implementation-node/`).

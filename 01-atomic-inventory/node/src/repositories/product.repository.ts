@@ -53,8 +53,7 @@ export class ProductRepository implements IProductRepository {
 	}
 
 	/**
-	 * No locking — race condition under concurrency. For demo/load-test only.
-	 * @deprecated Do not use in production.
+	 * Simple UPDATE (no lock). Safe when writing a known value (e.g. sync after Redis); do not use for read-modify-write under concurrency.
 	 */
 	async updateStockNaive(sku: string, newQuantity: number): Promise<boolean> {
 		try {

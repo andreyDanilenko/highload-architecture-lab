@@ -1,38 +1,17 @@
-import { ProductRepository } from "@/repositories/product.repository";
+/**
+ * Root DI container. Composed from module containers.
+ * Safe to use after connectRedis() and pg pool are ready (see server.ts start()).
+ */
 import {
-	RedisStockRepository,
-	type RedisClientLike,
-} from "@/repositories/redis-stock.repository";
-import { TransactionRepository } from "@/repositories/transaction.repository";
-import { InventoryService } from "@/services/inventory.service";
-import { InventoryController } from "@/controllers/inventory.controller";
-import { pgPool, inventoryConfig, redisClient } from "@/config";
-
-export const productRepo = new ProductRepository(pgPool);
-export const transactionRepo = new TransactionRepository(pgPool);
-// redisClient has get/set; eval() for Lua is available at runtime (node-redis EVAL)
-export const redisStockRepo = new RedisStockRepository(
-	redisClient as unknown as RedisClientLike,
-);
-
-export const inventoryService = new InventoryService(
+	inventoryContainer,
 	productRepo,
 	transactionRepo,
-	pgPool,
-	inventoryConfig,
-	redisStockRepo,
-);
+	inventoryService,
+	inventoryController,
+} from "./inventory.container";
 
-export const inventoryController = new InventoryController(inventoryService);
+export { productRepo, transactionRepo, inventoryService, inventoryController };
 
 export const container = {
-	// Repositories
-	productRepo,
-	transactionRepo,
-
-	// Services
-	inventoryService,
-
-	// Controllers
-	inventoryController,
+	...inventoryContainer,
 };

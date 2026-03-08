@@ -1,12 +1,19 @@
 import { IRedisStockStore } from "@/contracts/redis-stock.contracts";
 
-/** Minimal Redis client for stock: get, set, and either eval(options) or sendCommand(['EVAL', ...]). */
+/** Key/argument types compatible with node-redis RedisArgument (string | Buffer). */
+export type RedisKey = string | Buffer;
+export type RedisValue = string | Buffer;
+
+/**
+ * Minimal Redis client interface for stock: get, set, and eval (or sendCommand fallback).
+ * Types are aligned with node-redis so createClient() result is assignable without casts.
+ */
 export interface RedisClientLike {
-	get(key: string): Promise<string | null>;
-	set(key: string, value: string): Promise<unknown>;
+	get(key: RedisKey): Promise<string | null>;
+	set(key: RedisKey, value: RedisValue): Promise<unknown>;
 	eval?(
 		script: string,
-		options: { keys?: string[]; arguments?: (string | number)[] },
+		options: { keys?: RedisKey[]; arguments?: RedisValue[] },
 	): Promise<unknown>;
 	sendCommand?(args: string[]): Promise<unknown>;
 }
@@ -73,7 +80,10 @@ export class RedisStockRepository implements IRedisStockStore {
 		await this.client.set(key(sku), String(quantity));
 	}
 
-	async decrementIfSufficient(sku: string, quantity: number): Promise<number | null> {
+	async decrementIfSufficient(
+		sku: string,
+		quantity: number,
+	): Promise<number | null> {
 		const k = key(sku);
 		const q = String(quantity);
 		let raw: unknown;
@@ -128,5 +138,25 @@ export class RedisStockRepository implements IRedisStockStore {
 		const result = Number(raw);
 		if (Number.isNaN(result) || result < 0) return null;
 		return result;
+	}
+
+	/**
+	 * Atomically add quantity (Redis INCRBY). For compensating transaction: rollback Redis if PG write fails.
+	 */
+	async increment(sku: string, quantity: number): Promise<number> {
+		const k = key(sku);
+		const q = String(quantity);
+		let raw: unknown;
+		if (typeof this.client.sendCommand === "function") {
+			raw = await this.client.sendCommand(["INCRBY", k, q]);
+		} else if (typeof this.client.eval === "function") {
+			raw = await this.client.eval(
+				"return redis.call('INCRBY', KEYS[1], ARGV[1])",
+				{ keys: [k], arguments: [q] },
+			);
+		} else {
+			throw new Error("Redis client has neither eval nor sendCommand");
+		}
+		return Number(raw);
 	}
 }
