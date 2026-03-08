@@ -6,7 +6,7 @@
 
 BASE_URL=${1:-"http://localhost:3000"}
 RESERVE_PATH=${2:-"/api/v1/inventory/reserve"}
-TOTAL_REQUESTS=100
+TOTAL_REQUESTS=500
 PRODUCT_SKU="SKU-TEST-001"
 
 # Colors
@@ -21,7 +21,8 @@ echo "======================"
 echo "   Endpoint: POST $RESERVE_URL"
 echo ""
 
-INITIAL_STOCK=$(curl -s "$BASE_URL/api/v1/inventory/stock/$PRODUCT_SKU" | jq -r '.stock')
+INITIAL_STOCK=$(curl -s "$BASE_URL/api/v1/inventory/stock/$PRODUCT_SKU" | jq -r '.stock' | tr -d '\n\r')
+INITIAL_STOCK=${INITIAL_STOCK:-0}
 echo -e "📦 Initial stock: ${GREEN}$INITIAL_STOCK${NC}"
 
 echo -e "\n📨 Sending $TOTAL_REQUESTS concurrent requests (in parallel)..."
@@ -43,11 +44,14 @@ done
 wait
 echo -e "\n✅ All requests completed"
 
-SUCCESS=$(grep -c "200" "$RESULTS_FILE" 2>/dev/null || echo 0)
+# Count 200s: use grep | wc -l so we always get a single integer (no "0\n0" from grep -c + || echo 0)
+SUCCESS=$(grep -F "200" "$RESULTS_FILE" 2>/dev/null | wc -l | tr -d ' ')
+SUCCESS=${SUCCESS:-0}
 FAIL=$((TOTAL_REQUESTS - SUCCESS))
 
 sleep 1
-FINAL_STOCK=$(curl -s "$BASE_URL/api/v1/inventory/stock/$PRODUCT_SKU" | jq -r '.stock')
+FINAL_STOCK=$(curl -s "$BASE_URL/api/v1/inventory/stock/$PRODUCT_SKU" | jq -r '.stock' | tr -d '\n\r')
+FINAL_STOCK=${FINAL_STOCK:-0}
 EXPECTED_STOCK=$((INITIAL_STOCK - SUCCESS))
 
 echo -e "\n📊 Results:"
@@ -56,7 +60,7 @@ echo "   Failed: $FAIL"
 echo "   Expected stock (initial - success): $EXPECTED_STOCK"
 echo "   Actual stock:   $FINAL_STOCK"
 
-if [ "$FINAL_STOCK" -eq "$EXPECTED_STOCK" ]; then
+if [ -n "$FINAL_STOCK" ] && [ -n "$EXPECTED_STOCK" ] && [ "$FINAL_STOCK" -eq "$EXPECTED_STOCK" ]; then
   echo -e "${GREEN}✅ No race condition — stock consistent${NC}"
 else
   # More stock left than expected = some successful reserves didn't deduct
