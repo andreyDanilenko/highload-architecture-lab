@@ -5,7 +5,7 @@ import { InventoryController } from "@/controllers/inventory.controller";
 import { pgPool } from "@/config/database";
 
 export const productRepo = new ProductRepository(pgPool);
-export const transactionRepo = new TransactionRepository();
+export const transactionRepo = new TransactionRepository(pgPool);
 
 export const inventoryService = new InventoryService(
 	productRepo,
