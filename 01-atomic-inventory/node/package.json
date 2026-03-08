@@ -1,0 +1,36 @@
+{
+  "name": "implementation-node",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsup src/server.ts --format esm --clean",
+    "start": "node dist/server.js",
+    "clean": "rm -rf dist",
+    "lint": "biome check src",
+    "lint:fix": "biome check src --write",
+    "format": "biome format --write src"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "dotenv": "^17.3.1",
+    "fastify": "^5.8.1",
+    "pg": "^8.20.0",
+    "redis": "^5.11.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.6",
+    "@types/node": "^25.3.5",
+    "@types/pg": "^8.18.0",
+    "nodemon": "^3.1.14",
+    "ts-node": "^10.9.2",
+    "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}

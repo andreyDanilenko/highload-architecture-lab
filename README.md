@@ -1,251 +1,338 @@
-# ⚡ Highload Architecture Lab
+# 30 Highload Engineering Challenges
 
-<div align="center">
-  
-[![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?style=for-the-badge&logo=go)](https://golang.org)
-[![Node.js](https://img.shields.io/badge/Node.js-20+-339933?style=for-the-badge&logo=nodedotjs)](https://nodejs.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-316192?style=for-the-badge&logo=postgresql)](https://www.postgresql.org/)
-[![Redis](https://img.shields.io/badge/Redis-7.2-DC382D?style=for-the-badge&logo=redis)](https://redis.io/)
-[![Kafka](https://img.shields.io/badge/Kafka-3.5-231F20?style=for-the-badge&logo=apache-kafka)](https://kafka.apache.org/)
-[![Docker](https://img.shields.io/badge/Docker-24.0-2496ED?style=for-the-badge&logo=docker)](https://www.docker.com/)
+[![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat-square&logo=go)](https://golang.org)
+[![Node.js](https://img.shields.io/badge/Node.js-20+-339933?style=flat-square&logo=nodedotjs)](https://nodejs.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-316192?style=flat-square&logo=postgresql)](https://www.postgresql.org/)
+[![Redis](https://img.shields.io/badge/Redis-7.2-DC382D?style=flat-square&logo=redis)](https://redis.io/)
+[![Kafka](https://img.shields.io/badge/Kafka-3.5-231F20?style=flat-square&logo=apache-kafka)](https://kafka.apache.org/)
+[![Docker](https://img.shields.io/badge/Docker-24.0-2496ED?style=flat-square&logo=docker)](https://www.docker.com/)
 
-**30 Architectural Patterns | 8 Modules | Production-Ready Implementations**
-
-</div>
-
-## 🎯 The Vision
-
-This repository is my personal laboratory for mastering highload architectures. Each module is not just a tutorial — it's a fully functional microservice that I design and implement from scratch, battle-testing patterns that matter in real production environments.
-
-**Why does this exist?** 
-To go beyond pattern names and truly understand their internals, bottlenecks, and trade-offs under load. 30 challenges — 30 real-world problems that every senior engineer faces.
-
-**My approach:** Every problem is implemented in both Go and Node.js. This dual-language perspective reveals how concurrency models and language design influence architectural decisions.
+A structured roadmap of 30 hands-on engineering challenges. Each project solves a real distributed systems problem and builds upon the previous ones. No theory without practice — you write code, break things, and learn why systems are designed the way they are.
 
 ---
 
-## 🗺 Learning Roadmap
+## The Philosophy
 
-```mermaid
-graph LR
-    A[Module I: Core<br/>Single Instance] --> B[Module II: Network<br/>Distributed Systems]
-    B --> C[Module III: Data<br/>Data Engineering]
-    C --> D[Module IV: Real-time<br/>Complex Interactions]
-    D --> E[Module V: Observability<br/>Monitoring & Dashboards]
-    E --> F[Module VI: Event-Driven<br/>Kafka & Streaming]
-    F --> G[Module VII: Low Latency<br/>Network Stack]
-    G --> H[Module VIII: Security<br/>Crypto & Blockchain]
-    
-    style A fill:#e1f5fe,stroke:#01579b
-    style B fill:#fff3e0,stroke:#e65100
-    style C fill:#f3e5f5,stroke:#4a148c
-    style D fill:#e8f5e8,stroke:#1b5e20
-    style E fill:#ffebee,stroke:#b71c1c
-    style F fill:#fff8e1,stroke:#ff6f00
-    style G fill:#e0f2f1,stroke:#004d40
-    style H fill:#fbe9e7,stroke:#bf360c
+These challenges exist because building production systems requires more than knowing syntax. You'll learn to:
+
+- Choose between competing strategies (pessimistic vs optimistic locks, fixed vs sliding windows)
+- Design for failure (retries, circuit breakers, timeouts)
+- Make conscious trade-offs (consistency vs availability, latency vs throughput)
+- See the whole system, not just your service
+
+Each challenge is implemented in both Go and Node.js to understand how language concurrency models affect architecture decisions.
+
+---
+
+## Repository Structure
+
+```
+/
+├── infrastructure/        # Shared dependencies (Postgres, Redis, Kafka, Prometheus, Grafana)
+├── 01-atomic-inventory/  # Foundation: concurrency strategies
+├── 02-anti-bruteforce/   # Rate limiting with Redis
+├── 03-heavy-worker/      # Worker pools and semaphores
+├── 04-idempotency/       # Request deduplication
+├── 05-rate-limiter/      # Cluster-wide Redis limiter
+├── 06-multilayer-cache/  # L1 (memory) + L2 (Redis)
+├── 07-bff/               # Backend for frontend with JWT
+├── 08-gateway/           # Router + load balancer
+├── 09-data-mocker/       # Bulk insert and indexing
+├── 10-readwrite-splitter/# Master + replica patterns
+├── 11-sharder/           # Consistent hashing
+├── 12-multitenancy/      # Row-Level Security
+├── 13-chat-engine/       # WebSockets + Pub/Sub
+├── 14-leaderboard/       # Redis Sorted Sets
+├── 15-saga/              # Distributed transactions
+├── 16-circuit-breaker/   # Failure protection
+├── 17-feature-toggle/    # Runtime configuration
+├── 18-log-aggregator/    # Structured logging
+├── 19-metrics-exporter/  # Prometheus metrics
+├── 20-grand-dashboard/   # Grafana visualization
+├── 21-kafka-exactly-once/# Exactly-once delivery
+├── 22-event-sourcing/    # Event store
+├── 23-job-scheduler/     # Distributed locks
+├── 24-cdc/               # Change Data Capture
+├── 25-tcp-proxy/         # L4 load balancing
+├── 26-zero-copy/         # sendfile, DMA
+├── 27-binary-protocol/   # Protobuf/MessagePack
+├── 28-redlock/           # Distributed locks
+├── 29-merkle-tree/       # Hash trees
+└── 30-wallet/            # Multi-signature
 ```
 
 ---
 
-## 📦 Module I: Concurrency & Integrity Fundamentals (Single Instance)
+## Block I: Concurrency & Consistency (Single Instance)
 
-*The foundation of any service. Working with threads, locks, and guarantees within a single instance.*
+*Foundation of any service. Working with threads, locks, and guarantees within a single instance.*
 
-| # | Project | Description | Key Concepts |
-|:-:|---------|-------------|--------------|
-| **1** | [Atomic Inventory Counter](./01-atomic-inventory) | Flash sale: process 100k requests for 1k items without overselling | `SELECT FOR UPDATE` `Optimistic Locking` `Pessimistic Locking` `Mutex` `Atomic` |
-| **2** | [Anti-Bruteforce Vault](./02-anti-bruteforce) | Login protection with progressive delay on failed attempts | `Leaky Bucket` `Rate Limiting` `In-memory storage` |
-| **3** | [Heavy Task Worker Pool](./03-heavy-worker) | Task queue with resource consumption control | `Worker Pool` `Semaphore` `Channels` `Worker Threads` |
-| **4** | [Idempotency Key Provider](./04-idempotency) | Middleware guaranteeing exactly-once execution | `Idempotency-Key` `Exactly-Once` `Redis` |
+### 01 — Atomic Inventory Counter
+**What:** Flash sale: deduct 1000 items under 100k concurrent requests without going negative.  
+**Why:** Understand race conditions and locking strategies.  
+**Implementation:** Compare pessimistic locks (`SELECT FOR UPDATE`), optimistic locks (version column), and Redis atomic operations.  
+**What you'll learn:** Transaction isolation levels, deadlocks, and when to use each locking strategy.
+
+### 02 — Anti-Bruteforce Vault
+**What:** PIN-protected vault with progressive delays on failed attempts.  
+**Why:** Rate limiting is everywhere (login, password reset, 2FA).  
+**Implementation:** Sliding window log in Redis with Lua scripts for atomicity.  
+**What you'll learn:** Atomic Redis operations, sliding window vs fixed window, and writing Lua scripts.
+
+### 03 — Heavy Task Worker Pool
+**What:** Process background jobs with controlled resource consumption.  
+**Why:** Prevent system overload from unpredictable workloads.  
+**Implementation:** Worker pool with semaphores, task queue, graceful shutdown.  
+**What you'll learn:** Goroutines vs event loop, backpressure, and task prioritization.
+
+### 04 — Idempotency Key Provider
+**What:** Middleware guaranteeing exactly-one execution of operations.  
+**Why:** Payment retries shouldn't charge twice.  
+**Implementation:** Store request IDs in Redis with TTL, atomic check-and-set.  
+**What you'll learn:** Idempotency patterns, exactly-once semantics, and idempotency key lifecycle.
 
 ---
 
-## 🌐 Module II: Distributed Systems & Networking
+## Block II: Distributed Systems & Networking
 
 *Making multiple servers work as one organism.*
 
-| # | Project | Description | Key Concepts |
-|:-:|---------|-------------|--------------|
-| **5** | [Distributed Rate Limiter](./05-rate-limiter) | Cluster-wide request limiting via shared storage | `Fixed Window` `Sliding Window` `Redis Lua` |
-| **6** | [Multilayer Cache](./06-multilayer-cache) | L1 (in-memory) + L2 (Redis) with Cache Stampede protection | `Cache Patterns` `Pub/Sub` `Single Flight` |
-| **7** | [Secure BFF](./07-bff) | Mobile/Web proxy with secure token exchange | `JWT` `Cookies` `API Composition` |
-| **8** | [API Gateway Aggregator](./08-gateway) | Parallel data fetching from 5 microservices | `Reverse Proxy` `Load Balancing` `Partial Failures` |
+### 05 — Distributed Rate Limiter
+**What:** Rate limit across a cluster, not per instance.  
+**Why:** With load balancing, per-instance limits are useless.  
+**Implementation:** Redis-based sliding window with Lua.  
+**What you'll learn:** Distributed state management, clock synchronization issues, and atomic scripts.
+
+### 06 — Multilayer Cache
+**What:** L1 (in-memory) + L2 (Redis) with cache stampede protection.  
+**Why:** Cache misses at high load can kill databases.  
+**Implementation:** Single flight pattern, probabilistic early expiration.  
+**What you'll learn:** Cache strategies (cache-aside, read-through), stampede prevention, and consistency trade-offs.
+
+### 07 — Secure BFF (Backend for Frontend)
+**What:** Middleware for mobile/web clients handling auth and API composition.  
+**Why:** Frontends shouldn't talk directly to microservices.  
+**Implementation:** JWT validation, secure cookies, aggregate multiple backend calls.  
+**What you'll learn:** Token security, session management, and API composition patterns.
+
+### 08 — API Gateway Aggregator
+**What:** Collect data from 5 microservices in parallel for a single response.  
+**Why:** Client-side aggregation is slow and chatty.  
+**Implementation:** Fan-out requests, handle partial failures, set deadlines.  
+**What you'll learn:** Scatter-gather pattern, deadline propagation, and partial failure handling.
 
 ---
 
-## 📊 Module III: Data Engineering Under Load
+## Block III: Data Engineering Under Load
 
-*When data outgrows a single database.*
+*When one database isn't enough.*
 
-| # | Project | Description | Key Concepts |
-|:-:|---------|-------------|--------------|
-| **9** | [Terabyte Data Mocker](./09-data-mocker) | Generate millions of rows and optimize bulk insertion | `Bulk Insert` `pgx Copy Protocol` `Streams` `Index Tuning` |
-| **10** | [Read/Write Splitter](./10-readwrite-splitter) | Middleware separating reads to replicas and writes to master | `Leader/Follower` `Replication Lag` `CQRS` |
-| **11** | [Custom Database Sharder](./11-sharder) | Distribute data across databases using Consistent Hashing | `Consistent Hashing` `Sharding` `Virtual Nodes` |
-| **12** | [SaaS Multitenancy Isolation](./12-multitenancy) | Isolate tenant data within a single cluster | `Row-Level Security` `Schema per Tenant` |
+### 09 — Terabyte Data Mocker
+**What:** Generate millions of rows and optimize insertion.  
+**Why:** Test data pipelines without real production data.  
+**Implementation:** Bulk insert, streaming, index tuning.  
+**What you'll learn:** Batch processing, COPY protocol, and indexing strategies.
 
----
+### 10 — Read/Write Splitter
+**What:** Route reads to replicas, writes to master.  
+**Why:** Scale reads without affecting write performance.  
+**Implementation:** Detect statement type, handle replication lag.  
+**What you'll learn:** Leader/follower architecture, eventual consistency, and lag monitoring.
 
-## ⚡ Module IV: Complex Patterns & Real-time
+### 11 — Custom Database Sharder
+**What:** Distribute data across multiple databases using consistent hashing.  
+**Why:** Horizontal scaling requires data distribution.  
+**Implementation:** Consistent hashing with virtual nodes, rebalancing logic.  
+**What you'll learn:** Sharding strategies, hotspot prevention, and resharding challenges.
 
-*Instant responses while maintaining integrity in distributed systems.*
-
-| # | Project | Description | Key Concepts |
-|:-:|---------|-------------|--------------|
-| **13** | [High-Load Chat Engine](./13-chat-engine) | 50k+ WebSocket connections with Pub/Sub broadcasting | `WebSockets` `Redis Pub/Sub` `Goroutines` `Event Loop` |
-| **14** | [Real-time Leaderboard](./14-leaderboard) | Top players from millions of records in real-time | `Sorted Sets` `In-Memory` `Atomic Updates` |
-| **15** | [Distributed SAGA Orchestrator](./15-saga) | Distributed transaction with compensation mechanism | `SAGA Pattern` `Outbox` `Orchestration` |
-| **16** | [Circuit Breaker Service](./16-circuit-breaker) | Prevent cascading failures when dependencies degrade | `Circuit Breaker` `Retry` `Timeout` `Bulkhead` |
-
----
-
-## 📈 Module V: Observability & The Grand Finale
-
-*Understanding what happens in your system under load.*
-
-| # | Project | Description | Key Concepts |
-|:-:|---------|-------------|--------------|
-| **17** | [Dynamic Feature Toggle](./17-feature-toggle) | Runtime feature management without redeployment | `Feature Flags` `ETCD/Redis` `Runtime Config` |
-| **18** | [Log Aggregator (Mini ELK)](./18-log-aggregator) | Real-time log collection and parsing | `Log Streaming` `ClickHouse` `Fluentd` |
-| **19** | [System Metrics Exporter](./19-metrics-exporter) | Instrument all services with Prometheus metrics | `Prometheus` `Latency` `RPS` `Error Rate` |
-| **20** | [The Grand Dashboard](./20-grand-dashboard) | Visualize all 19 services under load from benchmark bots | `Grafana` `PromQL` `k6` `Benchmarking` |
+### 12 — SaaS Multitenancy Isolation
+**What:** Isolate customer data in a shared cluster.  
+**Why:** SaaS platforms need both isolation and efficiency.  
+**Implementation:** Row-Level Security, schema-per-tenant, connection pooling.  
+**What you'll learn:** Multi-tenancy patterns, security boundaries, and noisy neighbor prevention.
 
 ---
 
-## 📨 Module VI: Message Brokers & Event-Driven Architecture (BigTech Standard)
+## Block IV: Complex Patterns & Real-time
 
-*Asynchronous communication and event streaming.*
+*Instant responses and integrity in distributed systems.*
 
-| # | Project | Description | Key Concepts |
-|:-:|---------|-------------|--------------|
-| **21** | [Kafka Exactly-Once Delivery](./21-kafka-exactly-once) | Pipeline guaranteeing no duplicates in processing | `Kafka` `Idempotent Producer` `Transactional API` |
-| **22** | [Event Sourcing Engine](./22-event-sourcing) | State derived from event history, perfect for FinTech audit | `Event Store` `Audit Log` `Snapshots` |
-| **23** | [Distributed Job Scheduler](./23-job-scheduler) | Scheduler guaranteeing single-instance execution across 100 nodes | `Distributed Locks` `Cron` `Leader Election` |
-| **24** | [Change Data Capture (CDC)](./24-cdc) | Stream Postgres changes to ElasticSearch in real-time | `Debezium` `Kafka Connect` `Real-time Sync` |
+### 13 — High-Load Chat Engine
+**What:** Handle 50k+ WebSocket connections with message broadcasting.  
+**Why:** Real-time features are expected in modern apps.  
+**Implementation:** Redis Pub/Sub for cross-instance broadcast, connection management.  
+**What you'll learn:** WebSocket scaling, connection limits, and Pub/Sub patterns.
+
+### 14 — Real-time Leaderboard
+**What:** Top players from millions of scores updated in real-time.  
+**Why:** Gaming and competitive features need instant updates.  
+**Implementation:** Redis Sorted Sets, atomic updates, pagination.  
+**What you'll learn:** Sorted set operations, real-time aggregation, and memory efficiency.
+
+### 15 — Distributed SAGA Orchestrator
+**What:** Distributed transaction with compensation mechanisms.  
+**Why:** Two-phase commit doesn't scale.  
+**Implementation:** Orchestration-based SAGA with compensation steps.  
+**What you'll learn:** Distributed transaction patterns, compensating transactions, and failure recovery.
+
+### 16 — Circuit Breaker Service
+**What:** Protect system from cascading failures.  
+**Why:** One slow service shouldn't bring down everything.  
+**Implementation:** Circuit states (closed/open/half-open), retry with backoff, bulkhead.  
+**What you'll learn:** Failure detection, graceful degradation, and resilience patterns.
 
 ---
 
-## ⚙️ Module VII: High Performance & Low Latency
+## Block V: Observability & The Grand Dashboard
 
-*When HTTP and JSON overhead becomes too expensive.*
+*Understanding what happens under load.*
 
-| # | Project | Description | Key Concepts |
-|:-:|---------|-------------|--------------|
-| **25** | [Custom TCP/UDP Proxy](./25-tcp-proxy) | L4 load balancing below HTTP layer | `Raw Sockets` `L4 Load Balancing` `Go net` |
-| **26** | [Zero-Copy File Server](./26-zero-copy) | Serve files bypassing application buffers | `sendfile` `Stream.pipe` `DMA` |
-| **27** | [Binary Protocol Parser](./27-binary-protocol) | Replace JSON with Protobuf/MessagePack | `Protocol Buffers` `MessagePack` `Serialization` |
+### 17 — Dynamic Feature Toggle
+**What:** Enable/disable features without redeployment.  
+**Why:** Safe rollouts and instant kill switches.  
+**Implementation:** Configuration service with Redis/ETCD, runtime updates.  
+**What you'll learn:** Feature flag management, A/B testing infrastructure, and configuration distribution.
+
+### 18 — Log Aggregator (Mini ELK)
+**What:** Collect and parse logs from all services in real-time.  
+**Why:** Debugging distributed systems requires centralized logs.  
+**Implementation:** Structured logging, log shipping, searchable storage.  
+**What you'll learn:** Log formats, correlation IDs, and efficient log storage.
+
+### 19 — System Metrics Exporter
+**What:** Instrument all services with Prometheus metrics.  
+**Why:** You can't improve what you don't measure.  
+**Implementation:** RPS, latency (p95/p99), error rates, resource usage.  
+**What you'll learn:** Metrics types (counters, gauges, histograms), instrumentation, and cardinality.
+
+### 20 — The Grand Dashboard
+**What:** Visualize all 19 services under load in Grafana.  
+**Why:** See the system as a whole, not individual parts.  
+**Implementation:** Load testing with k6, real-time dashboards, comparison views.  
+**What you'll learn:** Performance visualization, bottleneck identification, and system-wide observability.
 
 ---
 
-## 🔐 Module VIII: Cryptography & Decentralization (Crypto/Security)
+## Block VI: Message Brokers & Event-Driven Architecture
+
+*Asynchronous communication and stream processing.*
+
+### 21 — Kafka Exactly-Once Delivery
+**What:** Pipeline guaranteeing no duplicate message processing.  
+**Why:** Financial and inventory systems can't tolerate duplicates.  
+**Implementation:** Idempotent producer, transactional API, consumer idempotency.  
+**What you'll learn:** Kafka semantics, exactly-once trade-offs, and transactional boundaries.
+
+### 22 — Event Sourcing Engine
+**What:** System state derived from event history.  
+**Why:** Audit trails and time travel queries.  
+**Implementation:** Event store, snapshots, event replay.  
+**What you'll learn:** Event sourcing vs CRUD, snapshot strategies, and CQRS integration.
+
+### 23 — Distributed Job Scheduler
+**What:** Schedule jobs that run exactly once across a cluster.  
+**Why:** Cron on every instance runs jobs N times.  
+**Implementation:** Distributed locks, leader election, job coordination.  
+**What you'll learn:** Distributed cron, lease management, and failover handling.
+
+### 24 — Change Data Capture (CDC)
+**What:** Stream database changes to other systems in real-time.  
+**Why:** Keep caches, search indexes, and analytics in sync.  
+**Implementation:** Debezium, Kafka Connect, transformation logic.  
+**What you'll learn:** CDC internals, log-based change capture, and synchronization patterns.
+
+---
+
+## Block VII: High Performance & Networking
+
+*When HTTP and JSON overhead is too much.*
+
+### 25 — Custom TCP/UDP Proxy
+**What:** Load balance traffic at the transport layer.  
+**Why:** L4 proxies are faster than L7.  
+**Implementation:** Raw sockets, connection forwarding, health checks.  
+**What you'll learn:** TCP handshake, connection pooling, and L4 load balancing algorithms.
+
+### 26 — Zero-Copy File Server
+**What:** Serve files without copying through application buffers.  
+**Why:** Minimize CPU and memory for static content.  
+**Implementation:** sendfile syscall, DMA, efficient streaming.  
+**What you'll learn:** Kernel bypass, memory-mapped files, and I/O optimization.
+
+### 27 — Binary Protocol Parser
+**What:** Replace JSON with Protobuf/MessagePack.  
+**Why:** Smaller payloads, faster serialization.  
+**Implementation:** Schema definition, code generation, performance comparison.  
+**What you'll learn:** Serialization formats, binary wire protocols, and schema evolution.
+
+---
+
+## Block VIII: Security & Decentralization
 
 *Security mechanisms and distributed consensus.*
 
-| # | Project | Description | Key Concepts |
-|:-:|---------|-------------|--------------|
-| **28** | [Distributed Lock Manager (Redlock)](./28-redlock) | Cross-service locks using Redlock algorithm | `Redlock` `Redis` `Distributed Consensus` |
-| **29** | [Merkle Tree Validator](./29-merkle-tree) | Verify integrity of millions of records | `Hash Trees` `Blockchain` `Tamper-proof` |
-| **30** | [Hot/Cold Wallet Logic](./30-wallet) | Multi-signature asset access architecture | `Multi-sig` `Withdrawal Queues` `Transaction Signing` |
+### 28 — Distributed Lock Manager (Redlock)
+**What:** Distributed locks across independent services.  
+**Why:** Coordinate access to shared resources.  
+**Implementation:** Redlock algorithm with Redis, lock renewal, fencing tokens.  
+**What you'll learn:** Distributed locking pitfalls, clock drift, and the Redlock debate.
+
+### 29 — Merkle Tree Validator
+**What:** Verify integrity of millions of records.  
+**Why:** Detect tampering and sync large datasets efficiently.  
+**Implementation:** Hash tree construction, proof generation, verification.  
+**What you'll learn:** Hash-based verification, tree synchronization, and blockchain fundamentals.
+
+### 30 — Hot/Cold Wallet Logic
+**What:** Secure asset storage with withdrawal limits.  
+**Why:** Protect funds in production systems.  
+**Implementation:** Multi-signature, withdrawal queues, approval workflows.  
+**What you'll learn:** Security architecture, transaction signing, and operational security.
 
 ---
 
-## 🏗 Project Structure
+## Infrastructure
 
-Each module follows a consistent structure:
-
-```
-project/
-├── go/                   # Go implementation
-│   ├── cmd/
-│   ├── internal/
-│   └── README.md         # Go-specific insights
-├── node/                 # Node.js implementation
-│   ├── src/
-│   ├── tests/
-│   └── README.md         # Node-specific insights
-├── docs/                 # Diagrams, benchmarks, analysis
-├── docker-compose.yml    # Local dependencies
-├── Makefile              # Convenience commands
-└── README.md             # Project overview
-```
-
----
-
-## 🚀 Shared Infrastructure
-
-To avoid reinventing the wheel for each project, common infrastructure lives in the root:
+Shared dependencies for all projects:
 
 ```bash
 infrastructure/
 ├── docker-compose.yml    # Postgres, Redis, Kafka, Prometheus, Grafana, ClickHouse
-├── prometheus/           # Metrics collection config
-├── grafana/              # Dashboards (including The Grand Dashboard)
+├── prometheus/           # Metrics collection configuration
+├── grafana/              # Pre-built dashboards
 ├── k6/                   # Load testing scenarios
 └── scripts/              # Benchmark utilities
 ```
 
-**Quick Start:**
+**Quick start:**
 
 ```bash
-# Spin up all infrastructure
+# Start all dependencies
 make infra-up
 
-# Run a specific project (e.g., atomic-inventory in Go)
+# Run specific project (e.g., atomic-inventory in Go)
 cd 01-atomic-inventory
 make run-go
 
-# Run load tests
+# Run load test
 make load-test
 
-# View metrics in Grafana
+# View metrics
 open http://localhost:3000
 ```
 
 ---
 
-## 📊 The Grand Dashboard (Module V, Project 20)
+## What You'll Master
 
-When all 30 services are ready, a unified scenario runs:
-
-1. **Benchmark bot** generates load across all services simultaneously
-2. **Prometheus** collects metrics from every instance
-3. **Grafana** visualizes:
-
-   - RPS per service (Go vs Node.js comparison)
-   - Latency (p95, p99) side-by-side
-   - Memory and CPU consumption
-   - Error rates and retry counts
-   - Queue and lock contention heatmaps
-
----
-
-## 🎓 What I'm Learning
-
-- **Concurrency:** Goroutines vs Event Loop, Worker Threads, Atomic operations
-- **Databases:** Transactions, Isolation levels, Locks, Sharding, Replication
+- **Concurrency:** Goroutines vs event loop, worker threads, atomic operations
+- **Databases:** Transactions, isolation levels, locks, sharding, replication
 - **Architecture:** CQRS, Event Sourcing, SAGA, Circuit Breaker, BFF, API Gateway
-- **Message Brokers:** Kafka, delivery guarantees, consumer groups
-- **Observability:** Metrics, Logs, Tracing, Profiling under load
-- **Networking:** WebSockets, TCP/UDP, Binary protocols, Zero-copy
-- **Security:** JWT, RLS, Multi-sig, Distributed locks
+- **Message Brokers:** Kafka, guarantees, consumer groups
+- **Observability:** Metrics, logs, tracing, profiling under load
+- **Networking:** WebSockets, TCP/UDP, binary protocols, zero-copy
+- **Security:** JWT, RLS, multi-signature, distributed locks
 
 ---
 
-## 🤝 Contributing
-
-This is a living repository that grows with my understanding of highload systems. If you have ideas or suggestions, I'm happy to discuss them in Issues or PRs.
-
----
-
-## 📄 License
-
-MIT — feel free to use this for learning, portfolio, or at work.
-
----
-
-<div align="center">
-  
-**⭐ If this repository helps you on your senior engineer journey — star it! ⭐**
-
-</div>
+**⭐ If this roadmap helps you, star the repository! ⭐**
