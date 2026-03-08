@@ -73,4 +73,21 @@ export class InventoryController {
 			newBalance: result.newBalance,
 		};
 	}
+
+	async reserveRedis(request: FastifyRequest<{ Body: ReserveRequest }>) {
+		const body = reserveSchema.parse(request.body);
+		request.log.debug({ body }, "Processing reservation (redis)");
+
+		const result = await this.inventoryService.reserveStockRedis({
+			sku: body.sku,
+			quantity: body.quantity,
+			requestId: body.requestId,
+		});
+
+		return {
+			success: true,
+			duplicated: result.duplicated,
+			newBalance: result.newBalance,
+		};
+	}
 }

@@ -6,6 +6,7 @@ import {
 	ReserveResult,
 } from "@/contracts/inventory-service.contracts";
 import { IProductRepository } from "@/contracts/product-repository.contracts";
+import { IRedisStockStore } from "@/contracts/redis-stock.contracts";
 import { ITransactionRepository } from "@/contracts/transaction-repository.contracts";
 import {
 	NotFoundError,
@@ -26,6 +27,7 @@ export class InventoryService implements IInventoryService {
 		private transactionRepo: ITransactionRepository,
 		private pool: Pool,
 		private config: InventoryConfig,
+		private redisStore: IRedisStockStore,
 	) {}
 
 	/** Resolve idempotent reserve: return result if duplicate request, otherwise null. */
@@ -173,6 +175,40 @@ export class InventoryService implements IInventoryService {
 			"OPTIMISTIC_RETRY_EXHAUSTED",
 			{ sku: dto.sku, requestId: dto.requestId },
 		);
+	}
+
+	/**
+	 * Reserve stock using Redis atomic counter; persist to PostgreSQL.
+	 */
+	async reserveStockRedis(dto: CreateTransactionDTO): Promise<ReserveResult> {
+		const idempotent = await this.resolveIdempotentReserve(dto);
+		if (idempotent) return idempotent;
+
+		const product = await this.productRepo.findBySku(dto.sku);
+		if (!product) {
+			throw new NotFoundError("Product", { sku: dto.sku });
+		}
+
+		// Atomic: init from PG if key missing, then decrement (no race on cold start)
+		const newBalance = await this.redisStore.decrementIfSufficientOrInit(
+			dto.sku,
+			product.stockQuantity,
+			dto.quantity,
+		);
+		if (newBalance === null) {
+			const current = await this.redisStore.get(dto.sku);
+			throw new InsufficientStockError(
+				dto.sku,
+				dto.quantity,
+				current ?? 0,
+			);
+		}
+
+		const transaction = await this.transactionRepo.create(dto);
+		// Sync PG so getBalance and other strategies stay consistent
+		await this.productRepo.updateStockNaive(dto.sku, newBalance);
+
+		return this.successResult(newBalance, transaction);
 	}
 
 	async getBalance(sku: string): Promise<number> {
