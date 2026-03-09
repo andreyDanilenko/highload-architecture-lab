@@ -24,7 +24,6 @@ for i in $(seq 1 $TOTAL_REQUESTS); do
   (
     STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
       -X POST "$URL")
-      # если хочешь явно фиксировать IP через прокси-заголовок:
       # -H "X-Forwarded-For: 1.2.3.4")
     echo "$STATUS" >> "$RESULTS_FILE"
   ) &
