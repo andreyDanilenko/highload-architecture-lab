@@ -25,18 +25,8 @@ func New(deps *Deps) *Server {
 		},
 		deps: deps,
 	}
-	srv.routes(mux)
+	srv.registerRoutes(mux)
 	return srv
-}
-
-func (s *Server) routes(mux *http.ServeMux) {
-	mux.HandleFunc("/health", s.healthCheck)
-	mux.HandleFunc("/login", s.handleLoginRequired(s.deps.NaiveChecker))
-	mux.HandleFunc("/resource/naive", s.handleLoginRequired(s.deps.NaiveChecker))
-	mux.HandleFunc("/resource/pessimistic", s.handleLoginRequired(s.deps.PessimisticChecker))
-	mux.HandleFunc("/resource/optimistic", s.handleLoginRequired(s.deps.OptimisticChecker))
-	mux.HandleFunc("/vault/login", s.handleLoginRequired(s.deps.VaultChecker))
-	mux.HandleFunc("/", s.notFound)
 }
 
 func (s *Server) Start() error {
