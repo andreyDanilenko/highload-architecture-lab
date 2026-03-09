@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"anti-bruteforce/internal/adapter/inbound/http/routes"
 )
 
 // Server is the inbound HTTP API adapter.
@@ -25,10 +27,16 @@ func New(deps *Deps) *Server {
 		},
 		deps: deps,
 	}
-	srv.registerRoutes(mux)
+	routes.Register(
+		mux,
+		deps.Config,
+		deps.NaiveChecker,
+		deps.PessimisticChecker,
+		deps.OptimisticChecker,
+		deps.VaultChecker,
+	)
 	return srv
 }
-
 func (s *Server) Start() error {
 	fmt.Printf("Server starting on %s\n", s.httpServer.Addr)
 	return s.httpServer.ListenAndServe()
