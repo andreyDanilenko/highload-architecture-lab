@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"anti-bruteforce/internal/domain"
+
 	"github.com/redis/go-redis/v9"
 )
 
@@ -105,4 +106,3 @@ func (p *PessimisticLimiter) Allow(ip string, limit int, windowSec int64) (bool,
 
 // Ensure PessimisticLimiter implements domain.RateLimiter at compile time.
 var _ domain.RateLimiter = (*PessimisticLimiter)(nil)
-

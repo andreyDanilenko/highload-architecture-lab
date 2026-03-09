@@ -8,7 +8,7 @@ import (
 
 	httpadapter "anti-bruteforce/internal/adapter/inbound/http"
 	"anti-bruteforce/internal/adapter/outbound/memory"
-	redisadapter "anti-bruteforce/internal/adapter/outbound/redis"
+	redisadapter "anti-bruteforce/internal/adapter/outbound/redis/pessimistic"
 	"anti-bruteforce/internal/config"
 	"anti-bruteforce/internal/usecase"
 	"github.com/redis/go-redis/v9"
