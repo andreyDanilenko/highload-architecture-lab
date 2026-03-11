@@ -21,6 +21,7 @@ Implement and compare four strategies:
 
 Step-by-step plans per subtask are in `docs/`:
 
+- [docs/redis-explained-step-by-step.md](docs/redis-explained-step-by-step.md) — **как работает Redis, L1/L2/L3 пошагово**
 - [docs/subtask-1-naive.md](docs/subtask-1-naive.md) — in-memory, demo only
 - [docs/subtask-2-pessimistic.md](docs/subtask-2-pessimistic.md) — Redis lock
 - [docs/subtask-3-optimistic.md](docs/subtask-3-optimistic.md) — Redis WATCH + retry
