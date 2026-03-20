@@ -7,7 +7,21 @@
 [![Kafka](https://img.shields.io/badge/Kafka-3.5-231F20?style=flat-square&logo=apache-kafka)](https://kafka.apache.org/)
 [![Docker](https://img.shields.io/badge/Docker-24.0-2496ED?style=flat-square&logo=docker)](https://www.docker.com/)
 
+### Hi, my name is Andrey 
+and I have been a frontend developer for 4 years. To be honest, I always thought that an IT position was really easy for most tasks. But once I got a good position at a good company, I relaxed and forgot that a good developer must always learn something new.
+
+Today, when my company lost the project actually, I decided to continue my journey. This guide is for developers who share my ideas and want to become better. This guide will be helpful for other positions, not only backend, because it touches a lot of topics about building systems.
+
+Sometimes people believe that AI is our enemy, but fundamental knowledge will always be relevant. This guide was created with help from DeepSeek, but I think that's the least benefit you can get from AI.
+
+IMPORTANT!
+When you use AI, you can make one small mistake. At the moment when you get an answer to your question, you need to carefully read and update your code. Otherwise, you don't learn anything and continued education will not be healthy. It creates the impression that you know a lot. That's right in part, but...
+
 A structured roadmap of 30 hands-on engineering challenges. Each project solves a real distributed systems problem and builds upon the previous ones. No theory without practice — you write code, break things, and learn why systems are designed the way they are.
+
+---
+
+**Progress:** ▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 6.7% (2/30)
 
 ---
 
@@ -29,8 +43,8 @@ Each challenge is implemented in both Go and Node.js to understand how language 
 ```
 /
 ├── infrastructure/        # Shared dependencies (Postgres, Redis, Kafka, Prometheus, Grafana)
-├── 01-atomic-inventory/  # Foundation: concurrency strategies
-├── 02-anti-bruteforce/   # Rate limiting with Redis
+├── 01-atomic-inventory/  # ✅ Foundation: concurrency strategies
+├── 02-anti-bruteforce/   # ✅ Rate limiting with Redis
 ├── 03-heavy-worker/      # Worker pools and semaphores
 ├── 04-idempotency/       # Request deduplication
 ├── 05-rate-limiter/      # Cluster-wide Redis limiter
@@ -67,13 +81,13 @@ Each challenge is implemented in both Go and Node.js to understand how language 
 
 *Foundation of any service. Working with threads, locks, and guarantees within a single instance.*
 
-### 01 — Atomic Inventory Counter
+### 01 — Atomic Inventory Counter ✅
 **What:** Flash sale: deduct 1000 items under 100k concurrent requests without going negative.  
 **Why:** Understand race conditions and locking strategies.  
 **Implementation:** Compare pessimistic locks (`SELECT FOR UPDATE`), optimistic locks (version column), and Redis atomic operations.  
 **What you'll learn:** Transaction isolation levels, deadlocks, and when to use each locking strategy.
 
-### 02 — Anti-Bruteforce Vault
+### 02 — Anti-Bruteforce Vault ✅
 **What:** PIN-protected vault with progressive delays on failed attempts.  
 **Why:** Rate limiting is everywhere (login, password reset, 2FA).  
 **Implementation:** Sliding window log in Redis with Lua scripts for atomicity.  

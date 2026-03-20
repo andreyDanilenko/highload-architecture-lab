@@ -8,7 +8,7 @@ Infrastructure (Docker, Postgres, Redis, DB reset) is shared and run from the pa
 
 ## Prerequisites
 
-- Node.js 20+
+- Node.js 24+
 - npm
 - Docker & Docker Compose (for Postgres and Redis; started from `01-atomic-inventory`)
 - Optional: `curl`, `jq` for load tests

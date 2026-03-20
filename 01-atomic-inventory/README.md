@@ -1,12 +1,12 @@
 # Task 01: Atomic Inventory Counter
 
-Implement a reservation system that handles thousands of concurrent requests without going negative or losing updates (race condition).
+Reservation system under high concurrency: no negative stock, no lost updates.
 
 ---
 
 ## Problem
 
-Multiple threads or instances read the same stock, subtract, and write back — some deductions overwrite each other and are "lost":
+**Race condition (lost update):** multiple threads/instances read the same value, modify, and write back — last write overwrites others:
 
 ```
 Thread 1: Read stock = 5
@@ -19,18 +19,31 @@ Requirement: `stock_quantity` must never go negative.
 
 ---
 
+## Patterns and production context
+
+| Pattern | What it solves | Where used in production |
+|---------|----------------|--------------------------|
+| **Pessimistic lock** | Serialize access via row lock (`SELECT FOR UPDATE`) | Strong consistency, medium load: checkout, booking |
+| **Optimistic lock** | Avoid long-held locks; retry on version conflict | High load, low contention: inventory, versioned entities |
+| **Atomic counter** | Single-key atomic ops (Redis Lua, DB `SET x = x - 1`) | High RPS: stock, views, rate limits |
+| **Idempotency** | Same `requestId` → no double deduction | Retries, distributed systems |
+| **Compensating transaction** | Rollback side effect if main op fails (e.g. Redis increment after PG fail) | Two-phase flows, eventual consistency |
+| **Read/Write separation** | Hot path in Redis, PG as source of truth | CQRS-like: fast reads/writes, async sync to DB |
+
+**Production domains:** e-commerce (reserve on checkout), seat/table booking, bonus deduction, billing limits.
+
+---
+
 ## Task (overview)
 
-Implement and compare four reservation strategies:
+Implement and compare four strategies:
 
-1. **Naive** — read-modify-write with no locking. Used only to demonstrate the race (100 requests → some updates lost). Do not use in production.
-2. **Pessimistic** — row lock in the DB (`SELECT FOR UPDATE`) inside a single transaction. No lost updates; under high contention, slower.
-3. **Optimistic** — `version` column; update only if version matches, retry on conflict. No long-held locks; faster than pessimistic when contention is low.
-4. **Redis** — atomic counter in Redis (Lua), synced to PostgreSQL. Highest RPS; fits highload counters (stock, limits, views).
+1. **Naive** — read-modify-write, no locking. Demo only (shows lost updates).
+2. **Pessimistic** — `SELECT FOR UPDATE` in transaction. Strong consistency; blocking under contention.
+3. **Optimistic** — `version` column + retry on conflict. No long-held locks; good when conflicts are rare.
+4. **Redis** — atomic Lua decrement, sync to PG by delta; compensating transaction on PG failure. Highest RPS.
 
-Where this appears in production: e-commerce (reserve on checkout), seat/table booking, bonus deduction, billing limits.
-
-Step-by-step plans per subtask are in `docs/`:
+Step-by-step plans in `docs/`:
 
 - [docs/subtask-1-naive.md](docs/subtask-1-naive.md) — race demo
 - [docs/subtask-2-pessimistic.md](docs/subtask-2-pessimistic.md) — SELECT FOR UPDATE
@@ -42,45 +55,23 @@ Step-by-step plans per subtask are in `docs/`:
 
 ## Tech stack
 
-- **Runtime:** Node.js 20+ (reference implementation in `implementation-node`)
-- **Framework:** Fastify (routes, validation, error handler)
-- **Language:** TypeScript (tsx for dev)
-- **DB:** PostgreSQL 16+ — products, stock, version; transactions table (idempotency by `request_id`)
-- **Cache/counter:** Redis 7+ — atomic ops (Lua) for the Redis strategy
-- **Logging:** Pino (stdout + optional file)
-- **Validation:** Zod (request body)
-- **Infra:** Docker Compose (Postgres, Redis), DB reset and load-test scripts (bash, curl, jq)
+- **DB:** PostgreSQL 18+ — products, stock, version; transactions (idempotency by `request_id`)
+- **Cache:** Redis 8+ — atomic Lua for Redis strategy
+- **Infra:** Docker Compose, Makefile, load-test scripts (bash, curl, jq)
+- **Reference:** Node.js 24+, Fastify, TypeScript — see [node/README.md](node/README.md); Go 1.25+ — see [go/README.md](go/README.md)
 
 ---
 
-Infrastructure lives in this folder (`01-atomic-inventory`): Docker Compose, init SQL, Makefile.
-
-**1. Env (one file for Docker + Node/Go)**
-
-One `.env` in this folder (`01-atomic-inventory`) is used by Docker Compose and by the Node app (and later Go). `make infra-up` creates it from `env.example` if missing.
+## Quick start
 
 ```bash
-cp env.example .env   # or edit .env: DB_*, PORT, REDIS_*, etc.
-```
-
-**2. Start Postgres and Redis**
-
-```bash
+cp env.example .env
 make infra-up
-```
-
-**3. Reset DB (stock 1000, clear transactions)**
-
-```bash
 make reset-db
+make run-node
 ```
 
-**4. Run implementation**
-
-- **Node:** `make run-node` or `cd implementation-node && make dev` — see [implementation-node/README.md](implementation-node/README.md).
-- **Go:** placeholder; see [implementation-go/README.md](implementation-go/README.md).
-
-Other: `make infra-down`, `make infra-logs`, `make infra-ps`, `make infra-reset`.
+Other: `make infra-down`, `make infra-logs`, `make infra-reset`.
 
 ---
 
@@ -129,18 +120,7 @@ Responses: 200 — success; 409 — insufficient stock; 404 — product not foun
 - `./scripts/load-test/race-test-naive.sh` — expect lost updates (actual stock > initial - success).
 - `./scripts/load-test/race-test-pessimistic.sh`, `race-test-optimistic.sh`, `race-test-redis.sh` — expect consistency (actual = initial - success).
 
-Details and how to read results: [scripts/README.md](scripts/README.md).
-
----
-
-## Logs
-
-The Node app logs with Pino: stdout and, when enabled, a file.
-
-- **Files:** `implementation-node/logs/`. Filename: `run-<ISO-timestamp>.log` (created on startup when file logging is on).
-- **File logging:** On by default when `NODE_ENV !== "test"` and `LOG_TO_FILE` is not `"0"`.
-- **Level:** `LOG_LEVEL` (e.g. `info`, `debug`). Default `info`.
-- **Disable file:** set `LOG_TO_FILE=0` when starting the app.
+Details: [scripts/README.md](scripts/README.md).
 
 ---
 
@@ -157,11 +137,28 @@ For Redis: compensating transaction, drift risks, and **stabilization plan** (no
 
 ---
 
-## Deliverables (checklist)
+## Deliverables
 
-- All four strategies implemented (e.g. in Node under `implementation-node/`).
-- Idempotency by `requestId` on every reserve endpoint.
-- Load-test scripts: DB reset + race-test per strategy; naive shows lost updates; pessimistic, optimistic, redis show no loss.
-- Docker Compose for Postgres and Redis; short docs in README and step-by-step plans in `docs/`.
+- [ ] All four strategies implemented (e.g. in `node/`)
+- [ ] Idempotency by `requestId` on every reserve endpoint
+- [ ] Load-test scripts: naive shows lost updates; pessimistic, optimistic, redis show consistency
+- [ ] Docker Compose, step-by-step plans in `docs/`
 
-Success criterion for correct strategies: 100 successful requests of 1 unit each → final stock exactly 100 less than initial; no negative stock in any test.
+**Success criterion:** 100 requests × 1 unit → final stock = initial − 100; no negative stock.
+
+---
+
+## README template (for reuse)
+
+Structure for similar task READMEs:
+
+1. **Title + one-liner** — what the task does
+2. **Problem** — core issue (with example if helpful)
+3. **Patterns and production context** — design patterns, what each solves, where used in prod
+4. **Task (overview)** — strategies/approaches, links to detailed docs
+5. **Tech stack** — tools (DB, cache, infra), reference impl link
+6. **Quick start** — minimal commands
+7. **Schema / API** — contracts
+8. **Testing** — unit + load, success criteria
+9. **Limitations** — trade-offs per approach
+10. **Deliverables** — checklist + success criterion
