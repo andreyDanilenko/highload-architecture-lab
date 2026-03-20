@@ -8,6 +8,7 @@ import (
 
 	httpadapter "anti-bruteforce/internal/adapter/inbound/http"
 	"anti-bruteforce/internal/adapter/outbound/memory"
+	atomicadapter "anti-bruteforce/internal/adapter/outbound/redis/atomic"
 	optimisticadapter "anti-bruteforce/internal/adapter/outbound/redis/optimistic"
 	redisadapter "anti-bruteforce/internal/adapter/outbound/redis/pessimistic"
 	"anti-bruteforce/internal/config"
@@ -36,6 +37,12 @@ var Module = fx.Options(
 		fx.Annotate(
 			NewOptimisticLoginChecker,
 			fx.ResultTags(`name:"optimisticChecker"`),
+		),
+	),
+	fx.Provide(
+		fx.Annotate(
+			NewAtomicLoginChecker,
+			fx.ResultTags(`name:"vaultChecker"`),
 		),
 	),
 	fx.Provide(NewHTTPDeps),
@@ -76,6 +83,12 @@ func NewOptimisticLoginChecker(cfg *config.Config, client *redis.Client) usecase
 	return usecase.NewLoginChecker(limiter, cfg.RateLimitMax, cfg.RateLimitWindow)
 }
 
+// NewAtomicLoginChecker creates the LoginChecker for the atomic (Redis Lua) strategy.
+func NewAtomicLoginChecker(cfg *config.Config, client *redis.Client) usecase.LoginChecker {
+	limiter := atomicadapter.NewAtomicLimiter(client)
+	return usecase.NewLoginChecker(limiter, cfg.RateLimitMax, cfg.RateLimitWindow)
+}
+
 // httpDepsParams are the dependencies for NewHTTPDeps (for fx.In).
 type httpDepsParams struct {
 	fx.In
@@ -84,6 +97,7 @@ type httpDepsParams struct {
 	NaiveChecker       usecase.LoginChecker `name:"naiveChecker"`
 	PessimisticChecker usecase.LoginChecker `name:"pessimisticChecker"`
 	OptimisticChecker  usecase.LoginChecker `name:"optimisticChecker"`
+	VaultChecker       usecase.LoginChecker `name:"vaultChecker"`
 }
 
 // NewHTTPDeps builds HTTP adapter deps from config and registered checkers.
@@ -93,6 +107,7 @@ func NewHTTPDeps(p httpDepsParams) *httpadapter.Deps {
 		NaiveChecker:       p.NaiveChecker,
 		PessimisticChecker: p.PessimisticChecker,
 		OptimisticChecker:  p.OptimisticChecker,
+		VaultChecker:       p.VaultChecker,
 	}
 }
 
