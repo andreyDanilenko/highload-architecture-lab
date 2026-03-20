@@ -21,6 +21,10 @@ A structured roadmap of 30 hands-on engineering challenges. Each project solves 
 
 ---
 
+**Progress:** ▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 6.7% (2/30)
+
+---
+
 ## The Philosophy
 
 These challenges exist because building production systems requires more than knowing syntax. You'll learn to:
@@ -39,8 +43,8 @@ Each challenge is implemented in both Go and Node.js to understand how language 
 ```
 /
 ├── infrastructure/        # Shared dependencies (Postgres, Redis, Kafka, Prometheus, Grafana)
-├── 01-atomic-inventory/  # Foundation: concurrency strategies
-├── 02-anti-bruteforce/   # Rate limiting with Redis
+├── 01-atomic-inventory/  # ✅ Foundation: concurrency strategies
+├── 02-anti-bruteforce/   # ✅ Rate limiting with Redis
 ├── 03-heavy-worker/      # Worker pools and semaphores
 ├── 04-idempotency/       # Request deduplication
 ├── 05-rate-limiter/      # Cluster-wide Redis limiter
@@ -77,13 +81,13 @@ Each challenge is implemented in both Go and Node.js to understand how language 
 
 *Foundation of any service. Working with threads, locks, and guarantees within a single instance.*
 
-### 01 — Atomic Inventory Counter
+### 01 — Atomic Inventory Counter ✅
 **What:** Flash sale: deduct 1000 items under 100k concurrent requests without going negative.  
 **Why:** Understand race conditions and locking strategies.  
 **Implementation:** Compare pessimistic locks (`SELECT FOR UPDATE`), optimistic locks (version column), and Redis atomic operations.  
 **What you'll learn:** Transaction isolation levels, deadlocks, and when to use each locking strategy.
 
-### 02 — Anti-Bruteforce Vault
+### 02 — Anti-Bruteforce Vault ✅
 **What:** PIN-protected vault with progressive delays on failed attempts.  
 **Why:** Rate limiting is everywhere (login, password reset, 2FA).  
 **Implementation:** Sliding window log in Redis with Lua scripts for atomicity.  
