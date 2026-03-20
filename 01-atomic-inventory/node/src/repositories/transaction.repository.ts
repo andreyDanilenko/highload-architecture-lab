@@ -78,6 +78,7 @@ export class TransactionRepository implements ITransactionRepository {
 		}
 	}
 
+	
 	/**
 	 * Finds transaction by requestId. Returns null if not found.
 	 * Used for idempotency checks.

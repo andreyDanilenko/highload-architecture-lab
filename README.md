@@ -7,6 +7,16 @@
 [![Kafka](https://img.shields.io/badge/Kafka-3.5-231F20?style=flat-square&logo=apache-kafka)](https://kafka.apache.org/)
 [![Docker](https://img.shields.io/badge/Docker-24.0-2496ED?style=flat-square&logo=docker)](https://www.docker.com/)
 
+### Hi, my name is Andrey 
+and I have been a frontend developer for 4 years. To be honest, I always thought that an IT position was really easy for most tasks. But once I got a good position at a good company, I relaxed and forgot that a good developer must always learn something new.
+
+Today, when my company lost the project actually, I decided to continue my journey. This guide is for developers who share my ideas and want to become better. This guide will be helpful for other positions, not only backend, because it touches a lot of topics about building systems.
+
+Sometimes people believe that AI is our enemy, but fundamental knowledge will always be relevant. This guide was created with help from DeepSeek, but I think that's the least benefit you can get from AI.
+
+IMPORTANT!
+When you use AI, you can make one small mistake. At the moment when you get an answer to your question, you need to carefully read and update your code. Otherwise, you don't learn anything and continued education will not be healthy. It creates the impression that you know a lot. That's right in part, but...
+
 A structured roadmap of 30 hands-on engineering challenges. Each project solves a real distributed systems problem and builds upon the previous ones. No theory without practice — you write code, break things, and learn why systems are designed the way they are.
 
 ---
