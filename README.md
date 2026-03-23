@@ -12,7 +12,7 @@ and I have been a frontend developer for 4 years. To be honest, I always thought
 
 Today, when my company lost the project actually, I decided to continue my journey. This guide is for developers who share my ideas and want to become better. This guide will be helpful for other positions, not only backend, because it touches a lot of topics about building systems.
 
-Sometimes people believe that AI is our enemy, but fundamental knowledge will always be relevant. This guide was created with help from DeepSeek, but I think that's the least benefit you can get from AI.
+Sometimes people believe that AI is our enemy, but fundamental knowledge will always be relevant. This guide was created with help from AI, but I think that's the least benefit you can get from AI.
 
 IMPORTANT!
 When you use AI, you can make one small mistake. At the moment when you get an answer to your question, you need to carefully read and update your code. Otherwise, you don't learn anything and continued education will not be healthy. It creates the impression that you know a lot. That's right in part, but...
