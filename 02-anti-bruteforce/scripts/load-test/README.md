@@ -30,10 +30,40 @@ chmod +x race-test.sh
 ./race-test.sh http://localhost:3000 /login 50
 ./race-test.sh http://localhost:3000 /resource/naive 50
 ```
-
+TOTAL_REQUESTS=${3:-20}
 **Output:**
 
 - Total number of completed requests.
 - Count of 200/429/other status codes, so you can visually confirm that the
   naive limiter starts returning 429 after the configured threshold.
 
+for i in {1..2000}; do
+  echo -n "$i -> "
+  curl -s -o /dev/null -w "%{http_code}\n" -X POST "http://localhost:3000/resource/naive" \
+    -H "X-Forwarded-For: 1.2.3.4"
+done
+
+
+for i in {1..20}; do
+  echo -n "$i -> "
+  curl -s -o /dev/null -w "%{http_code}\n" -X POST "http://localhost:3000/vault/login" \
+    -H "X-Forwarded-For: 1.2.3.4"
+done
+
+for i in {1..2000}; do
+  echo -n "$i -> "
+  curl -s -o /dev/null -w "%{http_code}\n" -X POST "http://localhost:3000/resource/pessimistic" \
+    -H "X-Forwarded-For: 1.2.3.4"
+done
+
+for i in {1..20}; do
+  echo -n "$i -> "
+  curl -s -o /dev/null -w "%{http_code}\n" -X POST "http://localhost:3000/resource/optimistic" \
+    -H "X-Forwarded-For: 1.2.3.4"
+done
+
+for i in {1..20}; do
+  echo -n "$i -> "
+  curl -s -o /dev/null -w "%{http_code}\n" -X POST "http://localhost:3000/login" \
+    -H "X-Forwarded-For: 1.2.3.4"
+done
