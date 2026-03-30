@@ -21,7 +21,7 @@ A structured roadmap of 30 hands-on engineering challenges. Each project solves 
 
 ---
 
-**Progress:** ▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 6.7% (2/30)
+**Progress:** ▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 10% (3/30)
 
 ---
 
@@ -45,7 +45,7 @@ Each challenge is implemented in both Go and Node.js to understand how language 
 ├── infrastructure/        # Shared dependencies (Postgres, Redis, Kafka, Prometheus, Grafana)
 ├── 01-atomic-inventory/  # ✅ Foundation: concurrency strategies
 ├── 02-anti-bruteforce/   # ✅ Rate limiting with Redis
-├── 03-heavy-worker/      # Worker pools and semaphores
+├── 03-heavy-worker/      # ✅ Worker pools and semaphores
 ├── 04-idempotency/       # Request deduplication
 ├── 05-rate-limiter/      # Cluster-wide Redis limiter
 ├── 06-multilayer-cache/  # L1 (memory) + L2 (Redis)
