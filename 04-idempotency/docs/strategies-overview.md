@@ -1,72 +1,32 @@
-# Idempotency Strategies Overview
+# Четыре стратегии, один опыт
 
-**Goal:** Compare strategies for preventing duplicate business effects under retries, timeouts, and failures; state each strategy’s retention window and failure assumptions. Without idempotency, repeated requests lead to double charges, duplicate orders, and broken business invariants.
+Задача отделяет повтор HTTP-ответа от повторного бизнес-эффекта. Реализованы четыре провайдера общего [контракта Acquire/Complete](../go/pkg/idempotency/provider.go); выбор — `-provider noop|memory|redis|advanced`.
 
----
+| Стратегия | Что хранит | Пока pending активен | После expiry pending | Завершённый ответ |
+|-----------|------------|----------------------|----------------------|-------------------|
+| [noop](subtask-1-naive.md) | Ничего | Новый вызов handler | Новый вызов handler | Не сохраняет |
+| [memory](subtask-2-inmemory.md) | Map процесса под mutex | `in_progress` | `outcome_unknown`, запись остаётся | Копия ответа на ResultTTL |
+| [redis](subtask-3-redis-provider.md) | Redis, `SET NX` и TTL | `in_progress` | Ключ исчезает, следующий вызов может повторить эффект | WATCH/транзакция, ResultTTL |
+| [advanced](subtask-4-advanced-provider.md) | Redis, Lua и lease timestamp | `in_progress` | `outcome_unknown`, pending без TTL остаётся | Lua с проверкой owner, ResultTTL |
 
-## 1. No Idempotency (Baseline)
+У stateful-вариантов другой конкретный path, query или тело с тем же scope/key даёт `key_mismatch`, пока запись существует. `noop` намеренно не проверяет fingerprint. После expiry завершённого ответа любой stateful-вариант может принять новую попытку.
 
-- **Flow:** Handler just executes the operation (e.g. charges a payment) every time it receives a request.
-- **Behavior under retry:** Any client/network retry fully re-executes the operation (second payment, second order, etc.).
-- **Use:** A baseline that exposes duplicate effects in this task. It provides no deduplication for the chosen non-idempotent operation.
+## Что сравнивать
 
----
+1. **Идентичность:** одинаковый запрос, другое тело/path/query, другой demo tenant. Scope включает метод, совпавший шаблон маршрута, tenant и ключ; fingerprint — конкретный escaped path, raw query и raw body, включая JSON-пробелы. Нормализации нет.
+2. **Конкуренция:** один владелец и конкурирующие запросы при активном lease.
+3. **Время:** операция короче и длиннее lease; повтор до и после retention.
+4. **Граница эффекта:** запись в журнал произошла, а Complete не подтвердился.
+5. **Ресурсы:** capacity, размер запроса/ответа, недоступное хранилище.
 
-## 2. In-Memory Idempotency
+Это перечень сценариев для проверки, не отчёт об успешных запусках. Условия и результаты записывать в [experiment-notes.md](experiment-notes.md).
 
-- **Flow:** In-memory `map[key]Result` protected by mutex. On each request:
-  - Atomically create a `pending` record for a new key, then run the operation and store its result.
-  - Replay a completed result or report an in-progress conflict for an existing key.
-- **Pros:** Simple to implement, no external dependency.
-- **Cons:** 
-  - State is lost on restart.
-  - Does not work with multiple instances (keys are local to process).
-  - The current implementation has TTL/cleanup, but no capacity limit. Expiry and stale-owner behavior still need verification.
-- **Use:** Demo of basic idempotent pattern and its limitations.
+## Два независимых ограничения
 
----
+Owner token не даёт старому исполнителю записать ответ за нового владельца. Он не отменяет уже выполненную операцию и не блокирует эффект в другой системе.
 
-## 3. Redis-Based Idempotency Provider
+Карантин `memory`/`advanced` удерживает неизвестную попытку и снижает доступность: автоматического takeover и готового API сверки нет. Basic Redis оставляет доступность после expiry, но может повторить эффект. Это намеренно разные учебные стратегии.
 
-- **Flow:** Central `IdempotencyProvider` backed by Redis:
-  - `GetOrCreate(key)` creates a `pending` record using `SET NX` or returns existing one.
-  - `Complete/Fail` updates record with response or error.
-  - TTL controls how long records live.
-- **State sharing:** Instances use the same Redis keyspace. Application restarts can retain records while Redis retains them; Redis restart/failover durability depends on configuration, and TTL/eviction can remove records.
-- **Weaknesses:** 
-  - Without careful ownership checks and atomic record transitions, concurrent requests can race.
-  - A crash after an external effect but before recording the result leaves an unknown outcome. Lua alone does not close this gap.
-- **Use:** A planned shared-state experiment; the repository’s Redis provider is currently a stub.
+HTTP middleware буферизует и сохраняет статус, тело, `Content-Type` и `Location`; обычные завершённые ошибки тоже могут replay. [Спецификация](spec/specification.ru.md) содержит точный HTTP-контракт.
 
----
-
-## 4. Advanced Idempotency (Ownership, Lua, Failure Handling)
-
-- **Flow:** 
-  - HTTP middleware extracts/validates idempotency key.
-  - Provider:
-    - Atomically creates/locks a record (Redis + Lua).
-    - Distinguishes `pending`, `completed`, `failed` states.
-  - First request executes handler and stores response.
-  - Concurrent requests:
-    - While `pending` — return `409 Conflict` + `Retry-After`.
-    - After `completed` — return cached response.
-- **Atomicity:** A Lua script can make Redis record transitions atomic and check an owner token. It does not include a separate database write, payment or email in that atomic step.
-- **Reliability:** 
-  - Expiry handling distinguishes unknown outcomes from confirmed failures; expiry does not stop the old executor.
-  - Owner tokens protect the record. Coordinate the effect through a shared transaction or downstream idempotency, and reconcile unknown outcomes. Target-enforced fencing can reject stale-owner writes, but cannot deduplicate an effect already committed by a previous valid owner.
-  - Separate result retention from the ownership lease; test restarts and takeover.
-- **Observability:** Prometheus metrics and structured logs around idempotency operations.
-- **Use:** A planned exercise in specifying and testing failure behavior. Lua, locks and metrics alone do not establish readiness for real payments or other critical operations.
-
----
-
-## Summary table
-
-| Strategy         | Storage       | Scope             | Reliability                 | Use Case                      |
-|-----------------|---------------|-------------------|-----------------------------|-------------------------------|
-| No Idempotency  | None          | Per request       | None                        | Anti-example only            |
-| In-Memory       | Process RAM   | Single instance   | Lost on restart; expiry needs verification | Local experiments |
-| Redis Provider  | Redis         | Shared keyspace   | Persistence-dependent; external effect gap | Planned shared-state experiment |
-| Advanced        | Redis + Lua   | Shared keyspace   | Record atomicity; effect boundary must be addressed | Planned failure experiments |
-
+`GET /api/v1/effects` показывает журнал только текущего процесса. Журнал теряется при рестарте, поэтому опыт не моделирует устойчивый платёжный ledger. Для разных Redis-стратегий использовать разные namespace через `-redis-prefix`; общим namespace должны пользоваться только однородные реплики одного опыта.

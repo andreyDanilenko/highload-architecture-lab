@@ -1,0 +1,159 @@
+?   	idempotency/cmd/server	[no test files]
+?   	idempotency/internal/adapter/inbound/http	[no test files]
+=== RUN   TestPaymentValidatesBeforeRecordingEffect
+--- PASS: TestPaymentValidatesBeforeRecordingEffect (0.00s)
+=== RUN   TestPaymentCachesRejectionAndCountsEffectsIndependently
+--- PASS: TestPaymentCachesRejectionAndCountsEffectsIndependently (0.00s)
+PASS
+ok  	idempotency/internal/adapter/inbound/http/handlers	3.030s
+?   	idempotency/internal/adapter/inbound/http/routes	[no test files]
+=== RUN   TestExperimentRepeat
+=== RUN   TestExperimentRepeat/noop
+    experiment_test.go:38: statuses=200,200 effects=2
+=== RUN   TestExperimentRepeat/memory
+    experiment_test.go:38: statuses=200,200 effects=1
+=== RUN   TestExperimentRepeat/redis
+    experiment_test.go:38: statuses=200,200 effects=1
+=== RUN   TestExperimentRepeat/advanced
+    experiment_test.go:38: statuses=200,200 effects=1
+--- PASS: TestExperimentRepeat (0.06s)
+    --- PASS: TestExperimentRepeat/noop (0.00s)
+    --- PASS: TestExperimentRepeat/memory (0.00s)
+    --- PASS: TestExperimentRepeat/redis (0.03s)
+    --- PASS: TestExperimentRepeat/advanced (0.02s)
+=== RUN   TestExperimentTwoInstances
+=== RUN   TestExperimentTwoInstances/noop
+    experiment_test.go:60: statuses=200,200 total_effects=2
+=== RUN   TestExperimentTwoInstances/memory
+    experiment_test.go:60: statuses=200,200 total_effects=2
+=== RUN   TestExperimentTwoInstances/redis
+    experiment_test.go:60: statuses=200,200 total_effects=1
+=== RUN   TestExperimentTwoInstances/advanced
+    experiment_test.go:60: statuses=200,200 total_effects=1
+--- PASS: TestExperimentTwoInstances (0.08s)
+    --- PASS: TestExperimentTwoInstances/noop (0.00s)
+    --- PASS: TestExperimentTwoInstances/memory (0.00s)
+    --- PASS: TestExperimentTwoInstances/redis (0.05s)
+    --- PASS: TestExperimentTwoInstances/advanced (0.03s)
+=== RUN   TestExperimentLeaseExpiresBeforeCompletion
+=== RUN   TestExperimentLeaseExpiresBeforeCompletion/noop
+    experiment_test.go:84: statuses=200,200 effects=2
+=== RUN   TestExperimentLeaseExpiresBeforeCompletion/memory
+2026/09/24 13:17:10 ERROR idempotency completion failed; outcome requires reconciliation key_hash=5c347dacb294245373d8f77994b61c794f6864fac1e4d84f9bd4453a11215ee1
+    experiment_test.go:84: statuses=503,409 effects=1
+=== RUN   TestExperimentLeaseExpiresBeforeCompletion/redis
+2026/09/24 13:17:10 ERROR idempotency completion failed; outcome requires reconciliation key_hash=5c347dacb294245373d8f77994b61c794f6864fac1e4d84f9bd4453a11215ee1
+2026/09/24 13:17:10 ERROR idempotency completion failed; outcome requires reconciliation key_hash=5c347dacb294245373d8f77994b61c794f6864fac1e4d84f9bd4453a11215ee1
+    experiment_test.go:84: statuses=503,503 effects=2
+=== RUN   TestExperimentLeaseExpiresBeforeCompletion/advanced
+2026/09/24 13:17:10 ERROR idempotency completion failed; outcome requires reconciliation key_hash=5c347dacb294245373d8f77994b61c794f6864fac1e4d84f9bd4453a11215ee1
+    experiment_test.go:84: statuses=503,409 effects=1
+--- PASS: TestExperimentLeaseExpiresBeforeCompletion (0.65s)
+    --- PASS: TestExperimentLeaseExpiresBeforeCompletion/noop (0.20s)
+    --- PASS: TestExperimentLeaseExpiresBeforeCompletion/memory (0.10s)
+    --- PASS: TestExperimentLeaseExpiresBeforeCompletion/redis (0.24s)
+    --- PASS: TestExperimentLeaseExpiresBeforeCompletion/advanced (0.11s)
+=== RUN   TestInvalidConfigurationFailsBeforeStarting
+--- PASS: TestInvalidConfigurationFailsBeforeStarting (0.00s)
+=== RUN   TestDefaultAppReadinessAndDiagnostics
+--- PASS: TestDefaultAppReadinessAndDiagnostics (0.00s)
+PASS
+ok  	idempotency/internal/di	2.869s
+?   	idempotency/internal/domain	[no test files]
+?   	idempotency/internal/usecase	[no test files]
+=== RUN   TestMemoryConcurrentAcquireHasOneOwner
+--- PASS: TestMemoryConcurrentAcquireHasOneOwner (0.00s)
+=== RUN   TestMemoryRetentionOwnershipAndCopies
+--- PASS: TestMemoryRetentionOwnershipAndCopies (0.00s)
+=== RUN   TestMemoryExpiredPendingQuarantinedAndCapacity
+--- PASS: TestMemoryExpiredPendingQuarantinedAndCapacity (0.00s)
+=== RUN   TestMemoryExpiredCompletedReclaimsCapacity
+--- PASS: TestMemoryExpiredCompletedReclaimsCapacity (0.00s)
+=== RUN   TestProviderCancellationAndNoopBaseline
+--- PASS: TestProviderCancellationAndNoopBaseline (0.00s)
+=== RUN   TestRedisProvidersConcurrentAcquire
+=== RUN   TestRedisProvidersConcurrentAcquire/redis
+=== RUN   TestRedisProvidersConcurrentAcquire/advanced
+--- PASS: TestRedisProvidersConcurrentAcquire (0.05s)
+    --- PASS: TestRedisProvidersConcurrentAcquire/redis (0.03s)
+    --- PASS: TestRedisProvidersConcurrentAcquire/advanced (0.02s)
+=== RUN   TestRedisProvidersReplayAndMismatch
+=== RUN   TestRedisProvidersReplayAndMismatch/redis
+=== RUN   TestRedisProvidersReplayAndMismatch/advanced
+--- PASS: TestRedisProvidersReplayAndMismatch (0.01s)
+    --- PASS: TestRedisProvidersReplayAndMismatch/redis (0.01s)
+    --- PASS: TestRedisProvidersReplayAndMismatch/advanced (0.00s)
+=== RUN   TestRedisBasicLeaseExpiryPermitsRepeatedEffect
+--- PASS: TestRedisBasicLeaseExpiryPermitsRepeatedEffect (0.04s)
+=== RUN   TestAdvancedLeaseExpiryQuarantinesUnknownOutcome
+--- PASS: TestAdvancedLeaseExpiryQuarantinesUnknownOutcome (0.05s)
+=== RUN   TestRedisProvidersStaleOwnerCannotComplete
+=== RUN   TestRedisProvidersStaleOwnerCannotComplete/redis
+=== RUN   TestRedisProvidersStaleOwnerCannotComplete/advanced
+--- PASS: TestRedisProvidersStaleOwnerCannotComplete (0.10s)
+    --- PASS: TestRedisProvidersStaleOwnerCannotComplete/redis (0.05s)
+    --- PASS: TestRedisProvidersStaleOwnerCannotComplete/advanced (0.05s)
+=== RUN   TestRedisProvidersCompletedRetentionExpires
+=== RUN   TestRedisProvidersCompletedRetentionExpires/redis
+=== RUN   TestRedisProvidersCompletedRetentionExpires/advanced
+--- PASS: TestRedisProvidersCompletedRetentionExpires (0.09s)
+    --- PASS: TestRedisProvidersCompletedRetentionExpires/redis (0.05s)
+    --- PASS: TestRedisProvidersCompletedRetentionExpires/advanced (0.05s)
+=== RUN   TestRedisProvidersValidateBeforeStorage
+=== RUN   TestRedisProvidersValidateBeforeStorage/redis
+=== RUN   TestRedisProvidersValidateBeforeStorage/advanced
+--- PASS: TestRedisProvidersValidateBeforeStorage (0.00s)
+    --- PASS: TestRedisProvidersValidateBeforeStorage/redis (0.00s)
+    --- PASS: TestRedisProvidersValidateBeforeStorage/advanced (0.00s)
+=== RUN   TestRedisTTLSubmillisecondAndOverflow
+--- PASS: TestRedisTTLSubmillisecondAndOverflow (0.00s)
+=== RUN   TestRedisReplayStatusMatchesHTTPBuffer
+--- PASS: TestRedisReplayStatusMatchesHTTPBuffer (0.00s)
+=== RUN   TestHTTPConcurrentRequestsAndExactReplay
+--- PASS: TestHTTPConcurrentRequestsAndExactReplay (0.00s)
+=== RUN   TestHTTPMismatchAndScope
+--- PASS: TestHTTPMismatchAndScope (0.00s)
+=== RUN   TestHTTPRejectsInvalidInputBeforeAcquire
+=== RUN   TestHTTPRejectsInvalidInputBeforeAcquire/missing
+=== RUN   TestHTTPRejectsInvalidInputBeforeAcquire/space
+=== RUN   TestHTTPRejectsInvalidInputBeforeAcquire/too_long
+=== RUN   TestHTTPRejectsInvalidInputBeforeAcquire/non_ascii
+=== RUN   TestHTTPRejectsInvalidInputBeforeAcquire/duplicate
+=== RUN   TestHTTPRejectsInvalidInputBeforeAcquire/tenant
+=== RUN   TestHTTPRejectsInvalidInputBeforeAcquire/large_body
+--- PASS: TestHTTPRejectsInvalidInputBeforeAcquire (0.00s)
+    --- PASS: TestHTTPRejectsInvalidInputBeforeAcquire/missing (0.00s)
+    --- PASS: TestHTTPRejectsInvalidInputBeforeAcquire/space (0.00s)
+    --- PASS: TestHTTPRejectsInvalidInputBeforeAcquire/too_long (0.00s)
+    --- PASS: TestHTTPRejectsInvalidInputBeforeAcquire/non_ascii (0.00s)
+    --- PASS: TestHTTPRejectsInvalidInputBeforeAcquire/duplicate (0.00s)
+    --- PASS: TestHTTPRejectsInvalidInputBeforeAcquire/tenant (0.00s)
+    --- PASS: TestHTTPRejectsInvalidInputBeforeAcquire/large_body (0.00s)
+=== RUN   TestHTTPCompletionUsesDetachedBoundedContext
+--- PASS: TestHTTPCompletionUsesDetachedBoundedContext (0.00s)
+=== RUN   TestHTTPCompletionFailureDoesNotSendSuccess
+--- PASS: TestHTTPCompletionFailureDoesNotSendSuccess (0.00s)
+=== RUN   TestHTTPPanicAndOversizedResponseLeavePending
+=== RUN   TestHTTPPanicAndOversizedResponseLeavePending/panic
+=== RUN   TestHTTPPanicAndOversizedResponseLeavePending/body
+=== RUN   TestHTTPPanicAndOversizedResponseLeavePending/header
+--- PASS: TestHTTPPanicAndOversizedResponseLeavePending (0.00s)
+    --- PASS: TestHTTPPanicAndOversizedResponseLeavePending/panic (0.00s)
+    --- PASS: TestHTTPPanicAndOversizedResponseLeavePending/body (0.00s)
+    --- PASS: TestHTTPPanicAndOversizedResponseLeavePending/header (0.00s)
+=== RUN   TestHTTPProviderErrorsDoNotLeakOrExecute
+=== RUN   TestHTTPProviderErrorsDoNotLeakOrExecute/key_mismatchkey_was_used_with_different_request_parameters
+=== RUN   TestHTTPProviderErrorsDoNotLeakOrExecute/outcome_unknownoperation_outcome_is_unknown
+=== RUN   TestHTTPProviderErrorsDoNotLeakOrExecute/idempotency_unavailableidempotency_store_capacity_reached
+=== RUN   TestHTTPProviderErrorsDoNotLeakOrExecute/idempotency_unavailableidempotency_store_unavailable
+=== RUN   TestHTTPProviderErrorsDoNotLeakOrExecute/idempotency_unavailablesecret
+--- PASS: TestHTTPProviderErrorsDoNotLeakOrExecute (0.00s)
+    --- PASS: TestHTTPProviderErrorsDoNotLeakOrExecute/key_mismatchkey_was_used_with_different_request_parameters (0.00s)
+    --- PASS: TestHTTPProviderErrorsDoNotLeakOrExecute/outcome_unknownoperation_outcome_is_unknown (0.00s)
+    --- PASS: TestHTTPProviderErrorsDoNotLeakOrExecute/idempotency_unavailableidempotency_store_capacity_reached (0.00s)
+    --- PASS: TestHTTPProviderErrorsDoNotLeakOrExecute/idempotency_unavailableidempotency_store_unavailable (0.00s)
+    --- PASS: TestHTTPProviderErrorsDoNotLeakOrExecute/idempotency_unavailablesecret (0.00s)
+=== RUN   TestHTTPFingerprintIncludesConcretePathAndQuery
+--- PASS: TestHTTPFingerprintIncludesConcretePathAndQuery (0.00s)
+PASS
+ok  	idempotency/pkg/idempotency	2.875s

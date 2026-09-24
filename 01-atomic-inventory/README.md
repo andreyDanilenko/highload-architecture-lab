@@ -1,5 +1,7 @@
 # Task 01: Atomic Inventory Counter
 
+**Материалы для разбора:** [статьи EN/RU и реальные проекты](../docs/reading-map-01-30.md#task-01) · [оценка постановки](../docs/quality-review-01-30.md) · [связи с EventLab](../docs/project-playground-01-107.md).
+
 Reservation experiments under high concurrency: test for negative stock and lost updates across four strategies, including an intentionally unsafe baseline.
 
 ---

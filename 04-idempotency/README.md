@@ -1,78 +1,104 @@
-# Task 04: Idempotency Key Provider
+# 04. Идемпотентность: повтор запроса и границы эффекта
 
-Study how to prevent duplicate business effects in side-effectful HTTP operations (payments, orders, emails), and identify the limits of each strategy under retries, timeouts, and failures.
+**Материалы для разбора:** [статьи EN/RU и реальные проекты](../docs/reading-map-01-30.md#task-04) · [оценка постановки](../docs/quality-review-01-30.md) · [связи с EventLab](../docs/project-playground-01-107.md).
 
----
+Исследуем, как связаны ключ операции, конкурентное выполнение, сохранённый HTTP-ответ и бизнес-эффект. Реализованы четыре переключаемых варианта на Go. Учебный «платёж» записывается в ограниченный журнал памяти; реального списания денег и долговечного банковского ledger здесь нет.
 
-## Problem
+## Что сравниваем
 
-Clients, gateways, and load balancers retry requests. Users double-click buttons. Networks drop responses after the server has already executed the operation. Without idempotency, the same request can be processed multiple times, leading to **double charges**, **duplicate orders**, and broken business invariants.
+| `-provider` | Где хранится состояние | Повтор до окончания lease | Истёкший незавершённый запрос |
+|---|---|---|---|
+| `noop` | Нигде | Снова выполняется | Снова выполняется: baseline без защиты |
+| `memory` | Один процесс, mutex | `409 in_progress` | `409 outcome_unknown`, автоматического повторного исполнения нет |
+| `redis` | Общий Redis, `SET NX`, TTL, `WATCH` | `409 in_progress` | Ключ исчезает; новая попытка может повторить эффект |
+| `advanced` | Общий Redis, Lua, owner и lease | `409 in_progress` | Запись остаётся, `409 outcome_unknown`, автоматического перехвата нет |
 
-An **Idempotency-Key** identifies one logical operation across retries. Within a defined retention window, matching requests can replay a stored result. Preventing duplicate business effects also requires coordinating that record with the effect: a Redis record alone does not make an external payment or database write atomic. A timeout can leave the outcome unknown.
+В последних трёх вариантах завершённая запись возвращает сохранённые статус, тело и разрешённые заголовки до `result-ttl`. Иное тело с тем же ключом даёт `409 key_mismatch`, пока запись существует. После удаления записи или окончания retention ключ снова может быть принят как новый.
 
----
+**Owner защищает запись результата в хранилище. Он не делает внешний эффект атомарным с этой записью.** В `memory` и `advanced` неизвестный исход блокирует автоматический повтор ценой доступности. Устойчивость к потере Redis, eviction, failover и рестартам не доказана этими опытами.
 
-## Current implementation
+## Быстрый запуск
 
-The Go implementation includes `noop` and `memory` providers. `RedisProvider` is a stub that returns `ErrProviderNotAvailable`; Redis and advanced behavior below are planned work. The memory provider has TTL/cleanup, but expiry, ownership and recovery need further verification. The payment operation is simulated, and no production guarantees have been established.
+Нужен Go версии из [go.mod](go/go.mod); Docker Compose нужен только для Redis-вариантов. Команды ниже выполняются из `04-idempotency`.
 
-## Task (overview)
+```sh
+make test
+make run                         # memory, 127.0.0.1:8084
+```
 
-Implement and compare four strategies:
+В другом терминале отправить один и тот же запрос дважды:
 
-1. **No Idempotency** — execute operation on every request. Demo-only baseline to show the bug.
-2. **In-Memory** — store `key → result` in a local map with TTL; works only within a single process.
-3. **Redis Provider** — share idempotency records across instances. Application restarts can retain records while Redis retains them; Redis restart/failover behavior depends on persistence, replication and eviction settings.
-4. **Advanced / Failure Handling** — middleware + atomic Redis operations (Lua) + explicit locks/ownership, lock expiry handling, metrics, and concurrency-focused tests.
+```sh
+curl -i http://127.0.0.1:8084/api/v1/payments \
+  -H 'Content-Type: application/json' \
+  -H 'Idempotency-Key: payment-001' \
+  -d '{"from":"alice","to":"bob","amount":100}'
 
-Step-by-step plans per subtask are in `docs/`:
+curl -i http://127.0.0.1:8084/api/v1/payments \
+  -H 'Content-Type: application/json' \
+  -H 'Idempotency-Key: payment-001' \
+  -d '{"from":"alice","to":"bob","amount":100}'
 
-- [docs/subtask-1-naive.md](docs/subtask-1-naive.md) — baseline: no idempotency
-- [docs/subtask-2-inmemory.md](docs/subtask-2-inmemory.md) — in-memory provider with TTL
-- [docs/subtask-3-redis-provider.md](docs/subtask-3-redis-provider.md) — Redis-backed provider (shared state and persistence experiments)
-- [docs/subtask-4-advanced-provider.md](docs/subtask-4-advanced-provider.md) — advanced experiments (middleware + Lua + ownership + metrics)
-- [docs/strategies-overview.md](docs/strategies-overview.md) — comparison of all four strategies
-- [docs/spec/specification.ru.md](docs/spec/specification.ru.md) — design guide with illustrative code sketches (RU)
+curl http://127.0.0.1:8084/api/v1/effects
+curl http://127.0.0.1:8084/metrics
+```
 
----
+Ожидается один эффект и одинаковый ответ. `amount` — положительное целое число минимальных денежных единиц. Поменять `amount`, сохранив ключ: ожидается конфликт. Даже изменение пробелов JSON меняет fingerprint: сравниваются исходные байты, канонизации нет. В fingerprint также входят конкретный URL path и исходный query; их изменение в рамках того же scope/key даёт конфликт.
 
-## API (expected)
+Redis-вариант:
 
-This task is about the **idempotency layer**, so the concrete domain can be “payments” / “orders” / “emails”. A typical shape:
+```sh
+make redis-up                    # отдельный Compose-проект, Redis на 127.0.0.1:6384
+make run PROVIDER=advanced
+make test-integration            # реальные Redis-проверки с -race
+make experiment                  # сравнительные опыты, включая число эффектов
+make redis-down                  # останавливает стенд, сохраняет volume
+```
 
-- `POST /payments` — side-effectful endpoint protected by idempotency.
+Перед сменой варианта остановить предыдущий сервер. Для независимых ручных опытов задавать новый `-redis-prefix`; у реплик одного опыта prefix должен совпадать. Сохранённые Redis-ответы переживают перезапуск приложения, а учебный журнал — нет, поэтому после рестарта его счётчик не отражает прошлые эффекты.
 
-Expected idempotency behaviors:
+Можно использовать уже запущенный **учебный** Redis: `make experiment LAB_REDIS_ADDR=127.0.0.1:16384`. Тесты создают собственные пространства ключей и удаляют только их. Без `LAB_REDIS_ADDR` обычный `go test` пропускает Redis-сценарии; `make test-integration` задаёт адрес и требует доступности Redis.
 
-- **Missing key** (write methods): `400 Bad Request`
-- **First request with a new key**: execute business operation → `200 OK` (or `201`) and persist response under that key
-- **Repeat request with the same key and payload after completion, within retention**: replay the stored response according to the endpoint contract
-- **Same key with a different payload or operation scope**: reject the mismatch
-- **Concurrent request while first is `pending`**: `409 Conflict` + `Retry-After` (or similar)
+## Один запрос по шагам
 
-Notes:
-- Prefer returning `409` for “still processing” (pending) rather than waiting indefinitely.
-- For overload/backpressure, `429` can also be used (not required by default).
+```mermaid
+flowchart LR
+    A[Ключ + scope + fingerprint] --> B[Provider.Acquire]
+    B --> C[Сохранённый ответ / конфликт]
+    B --> D[Новая попытка и owner]
+    D --> E[PaymentService: эффект]
+    E --> F[Буфер HTTP-ответа]
+    F --> G[Provider.Complete]
+    G --> H[Ответ клиенту]
+```
 
----
+1. [HTTP middleware](go/pkg/idempotency/http.go) проверяет ключ и размер тела. Scope включает метод, маршрут и учебный tenant; конкретный path, query и исходные байты тела образуют SHA-256 fingerprint.
+2. [Provider](go/pkg/idempotency/provider.go) атомарно решает, кто владеет попыткой, кому вернуть replay и кому отказать.
+3. [HTTP handler](go/internal/adapter/inbound/http/handlers/payment.go) разбирает JSON; [сервис](go/internal/usecase/payment.go) проверяет команду и добавляет отдельный эффект.
+4. Middleware буферизует ответ и вызывает `Complete` с ограниченным контекстом, независимым от отмены клиента. До успешного сохранения результат не отправляется как успех.
+5. Если эффект выполнен, но завершение не сохранилось, клиент получает `outcome_unknown`. Новый ключ не является способом безопасно «повторить платёж».
 
-## What to verify
+Общие JSON-ответы уже берутся из [`labshared/httpx`](../shared/go/httpx/response.go). Идемпотентность пока остаётся внутри задачи: вынос в общий пакет имеет смысл после появления второго потребителя с тем же контрактом.
 
-- **Correctness under retries**: count committed effects independently of HTTP responses; test retries within and after retention, and failure between the effect and result storage.
-- **Concurrency safety**: within a valid ownership period, concurrent matching requests admit one active owner. Test a paused owner resuming after expiry; one handler execution and one committed business effect are different properties.
-- **Cache semantics**: define and verify which status, headers and body are stored and replayed. This is expected behavior, not a claim about the current implementation.
-- **TTL & cleanup**: verify expiry and measure storage under the stated request rate. TTL limits retention, not total memory by itself; expiry also ends the deduplication window.
-- **Lock expiry** (advanced): distinguish a lost owner from a slow one. Define recovery for unknown outcomes and protect the effect against stale owners before permitting takeover.
-- **Observability** (advanced): metrics/logs show cache hits, conflicts, errors, latencies.
+## Контракт и ограничения
 
----
+- `POST /api/v1/payments` требует один `Idempotency-Key` длиной 1–128 видимых ASCII-символов. `X-Demo-Tenant` показывает разделение пространства ключей; это не аутентификация.
+- `GET /api/v1/effects` возвращает `{count,payments}`; журнал каждой реплики отдельный. `GET /metrics` содержит фиксированные labels без ключей и тел запросов. `GET /healthz` проверяет доступность Redis для соответствующих вариантов.
+- Сохраняется любой завершённый ответ handler, включая ошибки `400`, `408` и `503`. Повтор с тем же ключом воспроизводит его до retention. Ошибки до захвата ключа не кэшируются. Автоматической политики повторов после временных ошибок нет.
+- Replay поддерживает тело, статус, `Content-Type` и `Location`. Streaming, cookies и произвольные заголовки в контракт не входят.
+- `lease-ttl` ограничивает срок владения, `result-ttl` — окно хранения ответа после завершения. Ни один срок сам по себе не прекращает уже запущенный эффект.
+- `memory` теряет ключи при рестарте и не разделяет их между репликами. Его ёмкость ограничена `max-entries`; неизвестные исходы не вытесняются ради новых запросов.
+- В `advanced` pending-записи не имеют TTL и требуют сверки исхода. Автоматической сверки в задаче нет. Нельзя очищать их вслепую: это может разрешить повтор эффекта. При накоплении таких записей потребуется отдельная политика восстановления и ёмкости.
+- Compose использует `noeviction`, лимит Redis 128 MiB и AOF `everysec`. Это условия стенда, не гарантия сохранения каждого результата при отказе. Неизвестные записи могут заполнить хранилище; нехватка памяти возвращается как недоступность.
+- Журнал платежей ограничен `max-entries` и хранится в памяти. Отдельная транзакция между ним и Redis отсутствует. Это стенд для изучения разрыва, не реализация платёжной системы.
 
-## Problems and limitations per strategy
+Полный список настроек: `cd go && go run ./cmd/server -h`. Для воспроизведения expiry задать `-lease-ttl=10ms -payment-delay=100ms`: операция переживёт владение. Предсказание и наблюдение записать отдельно.
 
-| Strategy | Main problems / risks |
-|----------|------------------------|
-| **No Idempotency** | Repeated requests repeat side effects (double charge). Demo only. |
-| **In-Memory** | Lost on restart; does not work across instances; needs TTL/cleanup to avoid leaks. |
-| **Redis Provider** | Shared state; durability depends on configuration. Atomic Redis operations do not include external effects. |
-| **Advanced** | Ownership and failure handling add complexity; correctness remains scoped to the tested failure model and effect boundary. |
+## Проверки и разбор
 
+- [Записная книжка с фактическими результатами](docs/experiment-notes.md).
+- [Краткая спецификация](docs/spec/specification.ru.md) и [границы стратегий](docs/strategies-overview.md).
+- [Пошаговое чтение кода и вопросы](docs/lectures/lectures_1.md).
+- [Общие правила лаборатории](../CONTRIBUTING.md) и [карта Go](../docs/go-learning-map.md): GO-02, GO-03, GO-04, GO-05, GO-10, GO-11.
+
+Следующий самостоятельный опыт: хранить ключ операции, эффект и результат в одной транзакции БД; прервать процесс после commit, до ответа клиенту. Затем сравнить это с внешним сервисом, который поддерживает собственный idempotency key. Это разные границы согласования.

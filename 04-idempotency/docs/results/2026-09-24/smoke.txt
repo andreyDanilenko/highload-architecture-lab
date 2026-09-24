@@ -1,0 +1,2 @@
+CLI HTTP smoke PASS: readiness=200, first=200, replay=200, byte_equal=true, mismatch=409, missing_key=400, effects=1, metrics verified
+SIGTERM shutdown PASS: exit=0

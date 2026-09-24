@@ -1,36 +1,21 @@
-# 1. Naive Non-Idempotent Endpoint
+# Подзадача 1: noop — контрольный вариант
 
-**What:** Simple HTTP handler for a side-effectful operation (e.g. payment processing) without any idempotency guarantees.
+**Реализация:** [noop.go](../go/pkg/idempotency/noop.go). **CLI:** `-provider noop`.
 
-**Why:** To demonstrate the problem: repeated requests lead to repeated side effects (double charge, duplicate order, etc.).
+`Acquire` выдаёт новый owner token на каждый запрос, `Complete` не сохраняет ответ. HTTP middleware по-прежнему проверяет заголовок и лимиты, но provider не дедуплицирует и не проверяет соответствие path/query/тела ранее использованному ключу.
 
----
+## Шаги чтения
 
-## Implementation steps
+1. Проследить `Acquire → handler → Complete` в [http.go](../go/pkg/idempotency/http.go).
+2. Найти запись эффекта в [PaymentService](../go/internal/usecase/payment.go).
+3. Отправить тот же корректный запрос ещё раз и сравнить ответы с `GET /api/v1/effects`.
 
-1. **Define a basic request/response**
-   - `PaymentRequest` with fields like `UserID`, `Amount`.
-   - Stub `paymentService.Charge(userID, amount)` that simulates external billing.
+**Гипотеза для опыта:** два последовательных допустимых запроса с одним ключом и телом создадут две записи эффекта, если журнал не заполнен и запросы не отменены. Запуск и его результат здесь не утверждаются.
 
-2. **Naive handler**
-   - Parse JSON request.
-   - Call `paymentService.Charge`.
-   - On success, return `200 OK` with payment info.
-   - On error, `500 Internal Server Error`.
+## Граница и контрпример
 
-3. **Demonstrate the issue**
-   - Write a simple test or script:
-     - Send the **same** payment request multiple times (e.g. due to simulated timeout).
-     - Show that `Charge` is called multiple times (e.g. by logging or counting calls).
-   - Document scenarios:
-     - User double-clicks "Pay" button.
-     - HTTP client retries after network timeout.
+- **Что демонстрируем:** наличие `Idempotency-Key` без хранения состояния ничего не дедуплицирует.
+- **Контрпример к ожиданию «повтор безопасен»:** второй запрос с тем же ключом снова доходит до эффекта.
+- **Ограничение измерения:** журнал находится в памяти одного процесса и теряется при рестарте.
 
----
-
-## What will be done
-
-- Implement a non-idempotent `/payments` (or similar) endpoint.
-- Show via logs/tests how repeated requests repeat the side effect.
-- Use this as a baseline to justify adding an idempotency layer.
-
+`noop` сохраняется намеренно, чтобы было с чем сравнивать другие стратегии. Его нельзя представлять как безопасную дедупликацию. Личный прогноз, наблюдение и вопросы записать в [записной книжке](experiment-notes.md); общие команды — в [README](../README.md).

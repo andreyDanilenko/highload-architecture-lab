@@ -1,56 +1,63 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 
 	"idempotency/internal/domain"
 	"idempotency/internal/usecase"
-	"idempotency/pkg/idempotency"
 	"labshared/httpx"
 )
 
-// PaymentHandler — inbound HTTP adapter: JSON ↔ use case.
-type PaymentHandler struct {
-	payments      *usecase.PaymentService
-	idempotencyMw *idempotency.Middleware
-}
+// PaymentHandler переводит HTTP в команду; идемпотентность подключается на уровне маршрута.
+type PaymentHandler struct{ payments *usecase.PaymentService }
 
-func NewPaymentHandler(payments *usecase.PaymentService, mw *idempotency.Middleware) *PaymentHandler {
-	return &PaymentHandler{payments: payments, idempotencyMw: mw}
+func NewPaymentHandler(payments *usecase.PaymentService) *PaymentHandler {
+	return &PaymentHandler{payments: payments}
 }
 
 func (h *PaymentHandler) CreatePayment(w http.ResponseWriter, r *http.Request) {
-	// Шаг 1: клиент обязан передать Idempotency-Key (RFC-подобный контракт)
-	key := r.Header.Get("Idempotency-Key")
-	if key == "" {
-		httpx.WriteError(w, http.StatusBadRequest, "missing_key", "Idempotency-Key header is required")
-		return
-	}
-
-	// Шаг 2: разбор тела запроса
+	// Шаг 1: принимаем ровно один JSON-объект, без неизвестных полей и хвостовых данных.
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
 	var req domain.PaymentRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, "invalid_body", "invalid request body")
+	if err := decoder.Decode(&req); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid_body", "expected from, to and a positive integer amount")
 		return
 	}
-
-	// Шаг 3: обёртка бизнес-логики идемпотентностью (TryLock → fn → Complete)
-	result, err := idempotency.Execute(h.idempotencyMw, r.Context(), key, func() (*domain.PaymentResult, error) {
-		return h.payments.ProcessPayment(r.Context(), &req)
-	})
-
-	// Шаг 4: маппинг доменных/инфра ошибок в HTTP
+	var extra any
+	if err := decoder.Decode(&extra); err != io.EOF {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid_body", "exactly one JSON object is required")
+		return
+	}
+	if err := req.Validate(); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid_payment", "distinct nonempty accounts and positive integer amount are required")
+		return
+	}
+	// Шаг 2: выполняем одну попытку. Журнал хранит факт эффекта отдельно от HTTP-кэша.
+	result, err := h.payments.ProcessPayment(r.Context(), &req)
 	if err != nil {
-		if errors.Is(err, idempotency.ErrKeyAlreadyProcessing) {
-			httpx.WriteConflict(w, "already_processing", "request with this key is already processing", 5)
-			return
+		switch {
+		case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
+			httpx.WriteError(w, http.StatusRequestTimeout, "request_canceled", "operation was canceled before recording an effect")
+		case errors.Is(err, usecase.ErrLedgerFull):
+			httpx.WriteError(w, http.StatusServiceUnavailable, "ledger_full", "lab effect ledger reached its configured capacity")
+		default:
+			httpx.WriteError(w, http.StatusInternalServerError, "internal_error", "operation could not be completed")
 		}
-		httpx.WriteError(w, http.StatusInternalServerError, "internal_error", err.Error())
 		return
 	}
-
-	// Шаг 5: ответ (повторный запрос с тем же ключом вернёт тот же JSON)
+	// Шаг 3: middleware сохранит эти байты до отправки клиенту.
 	httpx.WriteJSON(w, http.StatusOK, result)
+}
+
+func (h *PaymentHandler) ListEffects(w http.ResponseWriter, _ *http.Request) {
+	effects := h.payments.Effects()
+	httpx.WriteJSON(w, http.StatusOK, struct {
+		Count    int                    `json:"count"`
+		Payments []domain.PaymentResult `json:"payments"`
+	}{len(effects), effects})
 }

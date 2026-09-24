@@ -1,60 +1,51 @@
+// Package idempotency сравнивает хранение ключей повторных HTTP-операций.
+// Атомарность записи провайдера не включает эффект во внешней системе.
 package idempotency
 
 import (
 	"context"
-	"encoding/json"
+	"crypto/rand"
+	"encoding/hex"
+	"net/http"
 	"time"
 )
 
-// Status — жизненный цикл идемпотентной записи.
-type Status string
-
-const (
-	StatusPending   Status = "pending"   // lock захвачен, операция выполняется
-	StatusCompleted Status = "completed" // результат сохранён, replay без side-effect
-	StatusFailed    Status = "failed"    // ошибка сохранена, replay той же ошибки
-)
-
-// Record — snapshot ключа: статус + результат + TTL lock.
-type Record struct {
-	Key         string    `json:"key"`
-	Status      Status    `json:"status"`
-	Result      any       `json:"result,omitempty"`
-	Error       string    `json:"error,omitempty"`
-	CreatedAt   time.Time `json:"created_at"`
-	LockedUntil time.Time `json:"locked_until,omitempty"`
+// Response хранит транспортный результат, а не указатель на доменную структуру.
+// Поэтому memory и Redis возвращают одинаковые байты, статус и выбранные заголовки.
+type Response struct {
+	Status int         `json:"status"`
+	Header http.Header `json:"header"`
+	Body   []byte      `json:"body"`
 }
 
-func NewRecord(key string, lockTTL time.Duration) *Record {
-	now := time.Now()
-	return &Record{
-		Key:         key,
-		Status:      StatusPending,
-		CreatedAt:   now,
-		LockedUntil: now.Add(lockTTL),
-	}
+// Claim допускает ровно одно из двух состояний: владелец попытки или готовый ответ.
+// Ошибки обработки и неизвестный исход возвращаются отдельно через error.
+type Claim struct {
+	Owner    string
+	Response *Response
 }
 
-func (r *Record) IsLockExpired() bool {
-	return time.Now().After(r.LockedUntil)
-}
-
-func (r *Record) Marshal() ([]byte, error) {
-	return json.Marshal(r)
-}
-
-func UnmarshalRecord(data []byte) (*Record, error) {
-	var rec Record
-	if err := json.Unmarshal(data, &rec); err != nil {
-		return nil, err
-	}
-	return &rec, nil
-}
-
-// Provider — outbound port: где хранить ключи (memory, redis, postgres…).
+// Provider — порт хранения. Key уже содержит scope операции; fingerprint проверяет
+// соответствие параметров. Lease ограничивает владение, retention — хранение ответа.
+// Complete обязан отклонять чужого/устаревшего владельца. Noop намеренно не хранит
+// состояние, а базовый Redis удаляет pending по TTL: это изучаемые ограничения.
 type Provider interface {
-	TryLock(ctx context.Context, key string, lockTTL time.Duration) (*Record, error)
-	Complete(ctx context.Context, key string, result any, err error) error
-	GetRecord(ctx context.Context, key string) (*Record, error)
+	Acquire(ctx context.Context, key, fingerprint string, lease time.Duration) (Claim, error)
+	Complete(ctx context.Context, key, owner string, response Response, retention time.Duration) error
 	Name() string
+}
+
+// newOwner не связывает владение с instance ID: у каждой попытки свой token.
+func newOwner() (string, error) {
+	var token [16]byte
+	if _, err := rand.Read(token[:]); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(token[:]), nil
+}
+
+func cloneResponse(response Response) Response {
+	response.Header = response.Header.Clone()
+	response.Body = append([]byte(nil), response.Body...)
+	return response
 }

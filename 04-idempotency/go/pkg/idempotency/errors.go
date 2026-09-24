@@ -3,7 +3,11 @@ package idempotency
 import "errors"
 
 var (
-	ErrKeyAlreadyProcessing = errors.New("request with this key is already processing")
-	ErrRecordNotFound       = errors.New("idempotency record not found")
-	ErrProviderNotAvailable = errors.New("idempotency provider not available")
+	ErrInProgress      = errors.New("operation is in progress")
+	ErrMismatch        = errors.New("key was used with different request parameters")
+	ErrOutcomeUnknown  = errors.New("operation outcome is unknown")
+	ErrCapacity        = errors.New("idempotency store capacity reached")
+	ErrNotOwner        = errors.New("attempt no longer owns the record")
+	ErrUnavailable     = errors.New("idempotency store unavailable")
+	ErrInvalidArgument = errors.New("invalid idempotency argument")
 )

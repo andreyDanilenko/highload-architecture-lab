@@ -1,0 +1,952 @@
+[
+  {
+    "task": "01",
+    "lang": "EN",
+    "title": "PostgreSQL — 13.3. Explicit Locking",
+    "url": "https://www.postgresql.org/docs/current/explicit-locking.html",
+    "verified_on": "2026-09-24",
+    "verification": "web.open: sections Row-Level Locks and Deadlocks describe FOR UPDATE conflicts, lock release at transaction end, deadlock detection and consistent lock ordering.",
+    "source_type": "official_documentation",
+    "coverage": "PostgreSQL row locks and deadlocks; not a complete inventory or optimistic-version implementation."
+  },
+  {
+    "task": "01",
+    "lang": "RU",
+    "title": "PostgreSQL — 13.3. Явные блокировки",
+    "url": "https://postgrespro.ru/docs/postgresql/current/explicit-locking",
+    "verified_on": "2026-09-24",
+    "verification": "web.open: Russian PostgreSQL chapter 13.3, including row locks and deadlocks; current page identifies PostgreSQL 18.",
+    "source_type": "vendor_hosted_translation_of_primary_documentation",
+    "coverage": "Russian translation on Postgres Professional; block/transaction behavior, not Redis."
+  },
+  {
+    "task": "01",
+    "lang": "EN",
+    "title": "PostgreSQL — src/test/isolation",
+    "url": "https://github.com/postgres/postgres/tree/master/src/test/isolation",
+    "verified_on": "2026-09-24",
+    "verification": "web.open: README describes interacting transactions, SQL sessions, steps and permutations; specs and expected directories present.",
+    "source_type": "original_project_source",
+    "coverage": "Deterministic concurrent SQL tests; inspect README and specs rather than use as inventory app."
+  },
+  {
+    "task": "02",
+    "lang": "EN",
+    "title": "OWASP Authentication Cheat Sheet",
+    "url": "https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html",
+    "verified_on": "2026-09-24",
+    "verification": "web.open + find Login Throttling: account-associated failure counter, lockout threshold/window/duration, exponential lockout and denial-of-service tradeoff discussed.",
+    "source_type": "official_security_guidance",
+    "coverage": "Authentication brute-force policy; no Redis Lua implementation."
+  },
+  {
+    "task": "02",
+    "lang": "RU",
+    "title": "NGINX — Модуль ngx_http_limit_req_module",
+    "url": "https://nginx.org/ru/docs/http/ngx_http_limit_req_module.html",
+    "verified_on": "2026-09-24",
+    "verification": "web.open/search: official Russian page specifies leaky bucket, request key, rate, burst, delay and rejection code.",
+    "source_type": "official_documentation_russian",
+    "coverage": "Narrower: request-rate limiting with leaky bucket, not progressive PIN failure handling or Redis sliding log."
+  },
+  {
+    "task": "02",
+    "lang": "EN",
+    "title": "NGINX — ngx_http_limit_req_module.c",
+    "url": "https://github.com/nginx/nginx/blob/master/src/http/modules/ngx_http_limit_req_module.c",
+    "verified_on": "2026-09-24",
+    "verification": "web.open + find: source contains ngx_http_limit_req_lookup, excess accounting and caller deciding delay/rejection.",
+    "source_type": "original_project_source",
+    "coverage": "Production C implementation of NGINX request limiter; different algorithm and runtime from lab."
+  },
+  {
+    "task": "03",
+    "lang": "EN",
+    "title": "Go Concurrency Patterns: Pipelines and cancellation",
+    "url": "https://go.dev/blog/pipelines",
+    "verified_on": "2026-09-24",
+    "verification": "web.open: official Go blog, Sameer Ajmani, 2014-03-13; fan-out/fan-in, Stopping short, Explicit cancellation and bounded parallelism examples.",
+    "source_type": "first_party_engineering_article",
+    "coverage": "Go concurrency, lifecycle and bounded work; conceptual guidance remains relevant, examples use done channels."
+  },
+  {
+    "task": "03",
+    "lang": "RU",
+    "title": "Microsoft — Создание службы очередей",
+    "url": "https://learn.microsoft.com/ru-ru/dotnet/core/extensions/queue-service",
+    "verified_on": "2026-09-24",
+    "verification": "web.open: Russian tutorial shows Channel.CreateBounded, BoundedChannelFullMode.Wait, backpressure explanation and cancellation in hosted worker.",
+    "source_type": "official_documentation_translation",
+    "coverage": "Narrower language coverage: .NET/C# bounded queue and cancellation, not Go syntax or priority scheduling."
+  },
+  {
+    "task": "03",
+    "lang": "EN",
+    "title": "golang/x/sync — semaphore worker-pool example",
+    "url": "https://github.com/golang/sync/blob/master/semaphore/semaphore_example_test.go",
+    "verified_on": "2026-09-24",
+    "verification": "web.open + find Example_workerPool: sem.Acquire(ctx,1) before launching goroutine, deferred Release(1), final Acquire for all permits.",
+    "source_type": "original_project_source",
+    "coverage": "Compact official Go semaphore example; not durable queue implementation."
+  },
+  {
+    "task": "04",
+    "lang": "EN",
+    "title": "Stripe — Idempotent requests",
+    "url": "https://docs.stripe.com/api/idempotent_requests",
+    "verified_on": "2026-09-24",
+    "verification": "web.open at line0: status/body stored including 500s, parameter comparison, retention at least 24h before removal, no saved result before endpoint execution.",
+    "source_type": "official_api_documentation",
+    "coverage": "Concrete public API contract; does not reveal server internal storage design."
+  },
+  {
+    "task": "04",
+    "lang": "RU",
+    "title": "ЮKassa — Формат взаимодействия с API: Идемпотентность",
+    "url": "https://yookassa.ru/developers/using-api/interaction-format",
+    "verified_on": "2026-09-24",
+    "verification": "web.open/find: same payload+Idempotence-Key replays original result; different key creates new request; retention 24 hours; HTTP500 leaves outcome unresolved.",
+    "source_type": "first_party_api_documentation_russian",
+    "coverage": "Original Russian provider API contract with retention and unknown-outcome handling; provider-specific behavior."
+  },
+  {
+    "task": "04",
+    "lang": "EN",
+    "title": "stripe-go — Automatic Retries",
+    "url": "https://github.com/stripe/stripe-go",
+    "verified_on": "2026-09-24",
+    "verification": "web.open/find Idempotency: README says intermittent failures are retried and idempotency keys are added for safe retries.",
+    "source_type": "original_project_source",
+    "coverage": "Client SDK, useful for retry/key reuse exploration; not a server idempotency provider."
+  },
+  {
+    "task": "04",
+    "lang": "EN",
+    "title": "Monzo — Building a processing system for International Payments",
+    "url": "https://monzo.com/blog/building-a-processing-system-for-international-payments",
+    "verified_on": "2026-09-24",
+    "verification": "Открыта статья 31 July 2024, Ryan Kilburn. Раздел Correctness прямо описывает idempotency в decision making и применении платежа к счёту.",
+    "source_type": "first_party_engineering_article",
+    "coverage": "Реальная банковская практика и обработка эффектов; не раскрывает конкретный алгоритм хранения ключей и не подтверждает использование Redis."
+  },
+  {
+    "task": "05",
+    "lang": "EN",
+    "title": "Microsoft — Rate Limiting pattern",
+    "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/rate-limiting-pattern",
+    "verified_on": "2026-09-24",
+    "verification": "web.open/find distributed: multiple uncoordinated processes share throttled capacity by partitioned exclusive leases; coordinated retries and backpressure discussed.",
+    "source_type": "official_architecture_guidance",
+    "coverage": "Rate-limited outbound work and shared capacity; analogous coordination problem, not exact Redis sliding-window HTTP implementation."
+  },
+  {
+    "task": "05",
+    "lang": "RU",
+    "title": "Microsoft — Шаблон ограничения скорости",
+    "url": "https://learn.microsoft.com/ru-ru/azure/architecture/patterns/rate-limiting-pattern",
+    "verified_on": "2026-09-24",
+    "verification": "web.open/find 500: Russian translation describes 500 requests/s split into 20 partitions, distributed mutual exclusion and time-limited grants.",
+    "source_type": "official_documentation_translation",
+    "coverage": "Same architecture with translated terminology; partitioned capacity rather than Redis sliding log."
+  },
+  {
+    "task": "05",
+    "lang": "EN",
+    "title": "go-redis/redis_rate",
+    "url": "https://github.com/go-redis/redis_rate",
+    "verified_on": "2026-09-24",
+    "verification": "web.open/find GCRA: README says Redis-backed GCRA/leaky bucket; rate.go, Lua and tests visible in repository listing.",
+    "source_type": "original_project_source",
+    "coverage": "Real Go Redis limiter using GCRA; compare semantics instead of assuming sliding-window equivalence."
+  },
+  {
+    "task": "06",
+    "lang": "EN",
+    "title": "Cloudflare — Sometimes I cache: implementing lock-free probabilistic caching",
+    "url": "https://blog.cloudflare.com/sometimes-i-cache/",
+    "verified_on": "2026-09-24",
+    "verification": "web.open/find stampede: origin overload on expiry, naive early refresh still stampedes, cache lock and probabilistic revalidation built with code; links production worker.",
+    "source_type": "first_party_engineering_article",
+    "coverage": "Stampede and probabilistic refresh in Cloudflare Workers; not L1/L2 consistency proof."
+  },
+  {
+    "task": "06",
+    "lang": "RU",
+    "title": "Microsoft — Шаблон Cache-Aside",
+    "url": "https://learn.microsoft.com/ru-ru/azure/architecture/patterns/cache-aside",
+    "verified_on": "2026-09-24",
+    "verification": "web.open: Russian page explains cache miss fill, write then invalidate, expiry/eviction, absence of consistency guarantee and private process-cache divergence.",
+    "source_type": "official_documentation_translation",
+    "coverage": "Cache-aside and local-cache consistency; narrower than full stampede/early-expiration algorithm."
+  },
+  {
+    "task": "06",
+    "lang": "EN",
+    "title": "golang/x/sync — singleflight.go",
+    "url": "https://github.com/golang/sync/blob/master/singleflight/singleflight.go",
+    "verified_on": "2026-09-24",
+    "verification": "web.open/find Do(: Group.Do and in-flight call coordination visible; source includes Forget.",
+    "source_type": "original_project_source",
+    "coverage": "In-process duplicate concurrent work suppression, not persistence, cache retention or cross-process coordination."
+  },
+  {
+    "task": "07",
+    "lang": "EN",
+    "title": "Microsoft — Backends for Frontends pattern",
+    "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/backends-for-frontends",
+    "verified_on": "2026-09-24",
+    "verification": "web.open: browser/mobile differences, client-specific backend layer, extra hop, operational cost, when not suitable, gateway integration.",
+    "source_type": "official_architecture_guidance",
+    "coverage": "BFF responsibilities and architecture tradeoffs; not exhaustive JWT/cookie security guide."
+  },
+  {
+    "task": "07",
+    "lang": "RU",
+    "title": "Microsoft — Шаблон бэкендов для фронтендов",
+    "url": "https://learn.microsoft.com/ru-ru/azure/architecture/patterns/backends-for-frontends",
+    "verified_on": "2026-09-24",
+    "verification": "web.open: Russian content covers client-specific layer, independent frontend teams, deployment overhead, network hop, duplication and applicability.",
+    "source_type": "official_documentation_translation",
+    "coverage": "Russian translation of BFF architecture; narrower than security checklist."
+  },
+  {
+    "task": "07",
+    "lang": "EN",
+    "title": "Duende — Backend For Frontend Samples",
+    "url": "https://docs.duendesoftware.com/bff/samples/",
+    "verified_on": "2026-09-24",
+    "verification": "web.open/find JavaScript Frontend: first-party sample catalogue describes /bff/user, login/logout, X-CSRF:1 API calls and React token forwarding; GitHub sample link click failed in browser tool, so catalogue URL retained.",
+    "source_type": "first_party_sample_catalogue",
+    "coverage": "Original .NET sample navigation, not verified sample execution or Go implementation; source link failure disclosed in verification."
+  },
+  {
+    "task": "08",
+    "lang": "EN",
+    "title": "Microsoft — Gateway Aggregation pattern",
+    "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/gateway-aggregation",
+    "verified_on": "2026-09-24",
+    "verification": "web.open: aggregation example and considerations include bottleneck, async I/O, timeout, partial dataset, metrics/tracing and error handling.",
+    "source_type": "official_architecture_guidance",
+    "coverage": "Fan-out aggregation and partial failure; not proof gateway universally improves latency."
+  },
+  {
+    "task": "08",
+    "lang": "RU",
+    "title": "Microsoft — Шаблон агрегирования шлюза",
+    "url": "https://learn.microsoft.com/ru-ru/azure/architecture/patterns/gateway-aggregation",
+    "verified_on": "2026-09-24",
+    "verification": "web.open/find тайм: Russian page explains calls to multiple services, timeouts returning partial data, async I/O and correlation IDs.",
+    "source_type": "official_documentation_translation",
+    "coverage": "Same aggregation pattern in Russian; architecture overview."
+  },
+  {
+    "task": "08",
+    "lang": "EN",
+    "title": "KrakenD Community Playground",
+    "url": "https://github.com/krakend/playground-community",
+    "verified_on": "2026-09-24",
+    "verification": "web.search + open: official README describes docker compose gateway/fake API, config/krakend/krakend.json and /git/{user} parallel aggregation endpoint.",
+    "source_type": "original_project_source",
+    "coverage": "Runnable project offered by authors, but not run in this research; inspect config and alter upstream behavior."
+  },
+  {
+    "task": "09",
+    "lang": "EN",
+    "title": "PostgreSQL — 14.4. Populating a Database",
+    "url": "https://www.postgresql.org/docs/current/populate.html",
+    "verified_on": "2026-09-24",
+    "verification": "web.open: bulk load guidance covers autocommit, COPY, index/constraint costs, WAL considerations and ANALYZE with explicit tradeoffs.",
+    "source_type": "official_documentation",
+    "coverage": "Bulk-load mechanisms; data generation realism is an additional experimental question."
+  },
+  {
+    "task": "09",
+    "lang": "RU",
+    "title": "PostgreSQL — COPY",
+    "url": "https://postgrespro.ru/docs/postgresql/current/sql-copy",
+    "verified_on": "2026-09-24",
+    "verification": "web.open succeeded: Russian PostgreSQL COPY command page with FROM/TO syntax and data source options.",
+    "source_type": "vendor_hosted_translation_of_primary_documentation",
+    "coverage": "Narrower: COPY contract and server-file versus client STDIN; not complete performance chapter."
+  },
+  {
+    "task": "09",
+    "lang": "EN",
+    "title": "pgx — copy_from.go",
+    "url": "https://github.com/jackc/pgx/blob/master/copy_from.go",
+    "verified_on": "2026-09-24",
+    "verification": "web.open/find CopyFromSource: Next, Values, Err interface, CopyFromRows/CopyFromSlice/CopyFromFunc and Conn.CopyFrom visible.",
+    "source_type": "original_project_source",
+    "coverage": "Go PostgreSQL driver streaming row source; source inspected, no benchmark run."
+  },
+  {
+    "task": "10",
+    "lang": "EN",
+    "title": "PostgreSQL — 26.4. Hot Standby",
+    "url": "https://www.postgresql.org/docs/current/hot-standby.html",
+    "verified_on": "2026-09-24",
+    "verification": "web.open/find delay: read-only standby, replay lag, conflicts with WAL application and cancellation/delay settings.",
+    "source_type": "official_documentation",
+    "coverage": "Replica behavior and consistency limits; application read-your-writes policy not supplied."
+  },
+  {
+    "task": "10",
+    "lang": "RU",
+    "title": "PostgreSQL — 26.4. Горячий резерв",
+    "url": "https://postgrespro.ru/docs/postgresql/current/hot-standby",
+    "verified_on": "2026-09-24",
+    "verification": "web.open: Russian overview explicitly describes measurable primary/standby lag, differing query results, restricted read-only commands and snapshot visibility after replay.",
+    "source_type": "vendor_hosted_translation_of_primary_documentation",
+    "coverage": "Russian PostgreSQL hot standby documentation hosted by Postgres Professional."
+  },
+  {
+    "task": "10",
+    "lang": "EN",
+    "title": "PgCat — PostgreSQL pooler with sharding, load balancing and failover support",
+    "url": "https://github.com/postgresml/pgcat",
+    "verified_on": "2026-09-24",
+    "verification": "web.open/find replica: README describes parser routing SELECT to replicas, other commands and explicit transactions to primary, and SET SERVER ROLE overrides.",
+    "source_type": "original_project_source",
+    "coverage": "Real query-routing proxy for studying automatic versus explicit routing; repository read, not deployed or freshness-tested."
+  },
+  {
+    "task": "11",
+    "lang": "EN",
+    "title": "Dynamo: Amazon’s Highly Available Key-value Store",
+    "url": "https://cdn.amazon.science/ac/1d/eb50c4064c538c8ac440ce6a1d91/dynamo-amazons-highly-available-key-value-store.pdf",
+    "verification": "2026-09-24: PDF opened; §4.2, pp.4–5 explicitly describes ring placement, non-uniform load and multiple virtual nodes per physical node.",
+    "source_type": "original_research",
+    "coverage": "Consistent hashing and virtual nodes in historical Dynamo; not current DynamoDB or SQL migration implementation.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "11",
+    "lang": "RU",
+    "title": "Microsoft: шаблон шардинга",
+    "url": "https://learn.microsoft.com/ru-ru/azure/architecture/patterns/sharding",
+    "verification": "2026-09-24: Opened Russian page; sections on choosing shard key, lookup/range/hash strategies and virtual-to-physical partitions.",
+    "source_type": "official_localized_documentation",
+    "coverage": "Broader sharding design and trade-offs; official localization.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "11",
+    "lang": "EN",
+    "title": "buraksezer/consistent",
+    "url": "https://github.com/buraksezer/consistent",
+    "verification": "2026-09-24: Opened author repository; README exposes LocateKey, PartitionCount, ReplicationFactor and bounded-load distribution.",
+    "source_type": "author_maintained_open_source",
+    "coverage": "Runnable Go hashing library; does not migrate database records.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "12",
+    "lang": "EN",
+    "title": "PostgreSQL 16: Row Security Policies",
+    "url": "https://www.postgresql.org/docs/16/ddl-rowsecurity.html",
+    "verification": "2026-09-24: Opened version 16 via official version selector; confirms default-deny, table-owner bypass, BYPASSRLS and FORCE ROW LEVEL SECURITY.",
+    "source_type": "official_documentation",
+    "coverage": "RLS contract and SQL examples; not complete tenant resource isolation.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "12",
+    "lang": "RU",
+    "title": "Postgres Professional: PostgreSQL 16, политики защиты строк",
+    "url": "https://postgrespro.ru/docs/postgresql/16/ddl-rowsecurity",
+    "verification": "2026-09-24: Opened PG16 through page's Russian version selector; Russian text confirms BYPASSRLS and FORCE ROW LEVEL SECURITY.",
+    "source_type": "vendor_translation_of_upstream_documentation",
+    "coverage": "Russian PostgreSQL manual published by Postgres Professional; translation of same mechanism, not independent evidence.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "12",
+    "lang": "EN",
+    "title": "PostgreSQL — rewrite/rowsecurity.c",
+    "url": "https://github.com/postgres/postgres/blob/master/src/backend/rewrite/rowsecurity.c",
+    "verified_on": "2026-09-24",
+    "verification": "Открыт файл и найден get_row_security_policies; комментарии описывают securityQuals, WithCheckOptions, default-deny и check_enable_rls.",
+    "source_type": "original_source_code",
+    "coverage": "Внутренний механизм RLS в ветке master; не готовое SaaS-приложение и не привязка к PostgreSQL 16."
+  },
+  {
+    "task": "13",
+    "lang": "EN",
+    "title": "Redis Pub/Sub",
+    "url": "https://redis.io/docs/latest/develop/pubsub/",
+    "verification": "2026-09-24: Opened Delivery semantics: at-most-once, disconnected subscriber loses messages; retained streams discussed separately.",
+    "source_type": "official_documentation",
+    "coverage": "Transient broadcast and delivery boundary; no durable chat replay.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "13",
+    "lang": "RU",
+    "title": "MDN: WebSocket",
+    "url": "https://developer.mozilla.org/ru/docs/Web/API/WebSocket",
+    "verification": "2026-09-24: Opened Russian API reference; readyState, bufferedAmount, send, open/message/close/error documented.",
+    "source_type": "official_localized_documentation",
+    "coverage": "Mozilla/MDN browser API documentation; client API only, not server scaling architecture.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "13",
+    "lang": "EN",
+    "title": "Gorilla WebSocket chat example",
+    "url": "https://github.com/gorilla/websocket/blob/main/examples/chat/README.md",
+    "verification": "2026-09-24: Opened maintainer example; describes serveWs, readPump, hub, writePump and one reader/one writer concurrency.",
+    "source_type": "official_open_source_example",
+    "coverage": "Small server and browser chat example, no durable message history.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "14",
+    "lang": "EN",
+    "title": "Redis sorted sets",
+    "url": "https://redis.io/docs/latest/develop/data-types/sorted-sets/",
+    "verification": "2026-09-24: Opened official tutorial; describes unique members ordered by score, lexical tie order, leaderboard use and ZADD/ZINCRBY/ZRANGE/ZRANK.",
+    "source_type": "official_documentation",
+    "coverage": "Core leaderboard data structure and operations.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "14",
+    "lang": "RU",
+    "title": "AWS: что такое Redis?",
+    "url": "https://aws.amazon.com/ru/elasticache/what-is-redis/",
+    "verification": "2026-09-24: Opened Russian page; real-time leaderboard section explicitly explains Redis Sorted Set ordering by score.",
+    "source_type": "official_localized_vendor_documentation",
+    "coverage": "Introductory Russian conceptual coverage only; not a command reference. Other marketing/version claims not used.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "14",
+    "lang": "EN",
+    "title": "Redis — src/t_zset.c",
+    "url": "https://raw.githubusercontent.com/redis/redis/unstable/src/t_zset.c",
+    "verified_on": "2026-09-24",
+    "verification": "Открыт raw-файл: Sorted set API, skiplist и функция zslCompareWithNode сравнивают score, затем строковое значение элемента.",
+    "source_type": "original_source_code",
+    "coverage": "Исходная реализация sorted sets, не готовый распределённый рейтинг; ветка unstable."
+  },
+  {
+    "task": "15",
+    "lang": "EN",
+    "title": "Microsoft: Saga design pattern",
+    "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/saga",
+    "verification": "2026-09-24: Opened official design page; local transactions, compensations, pivot steps and orchestration documented.",
+    "source_type": "official_documentation",
+    "coverage": "Distributed workflow design; compensation and intermediate-state boundaries.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "15",
+    "lang": "RU",
+    "title": "Microsoft: Saga",
+    "url": "https://learn.microsoft.com/ru-ru/azure/architecture/patterns/saga",
+    "verification": "2026-09-24: Opened Russian version; local transaction sequence and compensating transactions described.",
+    "source_type": "official_localized_documentation",
+    "coverage": "Official localization of EN source; not independent evidence.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "15",
+    "lang": "EN",
+    "title": "Temporal Go Saga workflow",
+    "url": "https://github.com/temporalio/samples-go/blob/main/saga/workflow.go",
+    "verification": "2026-09-24: Opened actual source: TransferMoney calls Withdraw/Deposit, defers compensation, sets RetryPolicy and invokes StepWithError.",
+    "source_type": "official_open_source_example",
+    "coverage": "Temporal-managed durable workflow example; not plain Go defer reliability.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "16",
+    "lang": "EN",
+    "title": "Microsoft: Circuit Breaker pattern",
+    "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/circuit-breaker",
+    "verification": "2026-09-24: Opened page; explains resource retention during timeouts, distinction from retry and closed/open/half-open transitions.",
+    "source_type": "official_documentation",
+    "coverage": "Failure admission control, state machine and retry boundary.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "16",
+    "lang": "RU",
+    "title": "Microsoft: Circuit Breaker",
+    "url": "https://learn.microsoft.com/ru-ru/azure/architecture/patterns/circuit-breaker",
+    "verification": "2026-09-24: Opened localized page; threshold-based blocking and state-machine behavior described; translation terminology inconsistent.",
+    "source_type": "official_localized_documentation",
+    "coverage": "Official localization; English state names retained to avoid translation ambiguity.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "16",
+    "lang": "EN",
+    "title": "sony/gobreaker",
+    "url": "https://github.com/sony/gobreaker",
+    "verification": "2026-09-24: Opened maintainer repository; Settings contains MaxRequests, Timeout, ReadyToTrip; README explains half-open limits and Execute.",
+    "source_type": "official_open_source",
+    "coverage": "Small Go implementation for comparing configuration and transitions.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "17",
+    "lang": "EN",
+    "title": "Unleash architecture overview",
+    "url": "https://docs.getunleash.io/get-started/unleash-overview",
+    "verification": "2026-09-24: Opened source; backend SDK local evaluation and memory caching contrasted with frontend evaluated flags; configuration propagation delay stated.",
+    "source_type": "official_documentation",
+    "coverage": "Actual feature-management system architecture and cache/propagation behavior.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "17",
+    "lang": "RU",
+    "title": "Microsoft: флаги функций",
+    "url": "https://learn.microsoft.com/ru-ru/dotnet/architecture/cloud-native/feature-flags",
+    "verification": "2026-09-24: Opened Russian chapter; conditional availability, gradual rollout and separation of deployment from release documented.",
+    "source_type": "official_localized_documentation",
+    "coverage": "Conceptual introduction using .NET APIs; official localization.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "17",
+    "lang": "EN",
+    "title": "Unleash/unleash",
+    "url": "https://github.com/Unleash/unleash",
+    "verification": "2026-09-24: Opened original project repository; quick start, SDKs, activation strategies and feature-management architecture present.",
+    "source_type": "official_open_source",
+    "coverage": "Real feature management platform, larger than a minimal lab mechanism.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "18",
+    "lang": "EN",
+    "title": "Go: Structured Logging with slog",
+    "url": "https://go.dev/blog/slog",
+    "verification": "2026-09-24: Opened Go team article; log attributes, JSON handler, Logger/Handler separation and contextual logging discussed.",
+    "source_type": "first_party_engineering",
+    "coverage": "Go standard-library structured logging; not transport/storage reliability.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "18",
+    "lang": "RU",
+    "title": "Microsoft: ведение журналов в .NET",
+    "url": "https://learn.microsoft.com/ru-ru/dotnet/core/extensions/logging/overview",
+    "verification": "2026-09-24: Opened Russian reference; message template plus Description key/value example, levels, categories, provider configuration and scopes present.",
+    "source_type": "official_localized_documentation",
+    "coverage": "Logging principles on .NET, not a Go tutorial; localized title rendered awkwardly as 'Вход в C#'.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "18",
+    "lang": "EN",
+    "title": "Grafana Alloy: popular logging frameworks",
+    "url": "https://github.com/grafana/alloy-scenarios/tree/main/app-instrumentation/logging/popular-logging-frameworks",
+    "verification": "2026-09-24: Opened official scenario; seven containers, stdout structured logs, loki.process parsing, config.alloy/helper.alloy and Loki forwarding described.",
+    "source_type": "official_open_source_example",
+    "coverage": "Runnable collection/parsing pipeline; examples not proof of end-to-end losslessness.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "19",
+    "lang": "EN",
+    "title": "Prometheus: Instrumentation",
+    "url": "https://prometheus.io/docs/practices/instrumentation/",
+    "verification": "2026-09-24: Opened official page; counter vs gauge, rate(), cardinality costs and link to histogram/summary guidance confirmed.",
+    "source_type": "official_documentation",
+    "coverage": "Prometheus instrumentation and metric design.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "19",
+    "lang": "RU",
+    "title": "Microsoft: создание метрик",
+    "url": "https://learn.microsoft.com/ru-ru/dotnet/core/diagnostics/metrics-instrumentation",
+    "verification": "2026-09-24: Opened Russian guide; metrics instruments, units, tags, histograms and memory cost of high-dimensional measurements documented.",
+    "source_type": "official_localized_documentation",
+    "coverage": "Related instrumentation concepts in .NET; narrower substitute, not Russian Prometheus reference.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "19",
+    "lang": "EN",
+    "title": "prometheus/client_golang",
+    "url": "https://github.com/prometheus/client_golang",
+    "verification": "2026-09-24: Opened official repository and examples directory; README explains instrumentation library, examples and promhttp pull collection.",
+    "source_type": "official_open_source",
+    "coverage": "Go client library and examples for direct application instrumentation.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "20",
+    "lang": "EN",
+    "title": "Grafana dashboard best practices",
+    "url": "https://grafana.com/docs/grafana/latest/visualizations/dashboards/build-dashboards/best-practices/",
+    "verification": "2026-09-24: Opened official page; RED/USE and dashboard should answer a question sections present.",
+    "source_type": "official_documentation",
+    "coverage": "Dashboard design and observability navigation; not causality proof.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "20",
+    "lang": "EN",
+    "title": "Grafana k6: Metrics",
+    "url": "https://grafana.com/docs/k6/latest/using-k6/metrics/",
+    "verification": "2026-09-24: Opened official page; Counter/Gauge/Rate/Trend and http_req_duration described.",
+    "source_type": "official_documentation",
+    "coverage": "Client-side load-test observations and metric semantics.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "20",
+    "lang": "RU",
+    "title": "Yandex Cloud: визуализация метрик через Grafana",
+    "url": "https://yandex.cloud/ru/docs/monitoring/operations/prometheus/querying/grafana",
+    "verification": "2026-09-24: Opened official Russian guide; Prometheus data source setup, dashboard compatibility and API limitations documented.",
+    "source_type": "official_vendor_documentation",
+    "coverage": "Yandex-specific source integration, not general dashboard theory or required lab hosting.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "20",
+    "lang": "EN",
+    "title": "Grafana QuickPizza",
+    "url": "https://github.com/grafana/quickpizza",
+    "verification": "2026-09-24: Opened official demo repo; k6/foundations and compose.grafana-local-stack.monolithic.yaml combine app, Alloy, Prometheus, Loki, Tempo and Grafana.",
+    "source_type": "official_open_source_example",
+    "coverage": "Complete observability/load-testing playground; selectively reusable for the ticket platform.",
+    "verified_on": "2026-09-24"
+  },
+  {
+    "task": "21",
+    "lang": "EN",
+    "title": "Apache Kafka 4.1 — Message Delivery Semantics",
+    "url": "https://kafka.apache.org/41/design/design/#message-delivery-semantics",
+    "verified_on": "2026-09-24",
+    "verification": "Открыта design page; раздел описывает producer ID/sequence number, транзакции и гарантии потребления.",
+    "source_type": "official_documentation",
+    "coverage": "Семантика Kafka 4.1; не обещание атомарности произвольных внешних эффектов."
+  },
+  {
+    "task": "21",
+    "lang": "RU",
+    "title": "Lamoda Tech — Паттерн Outbox",
+    "url": "https://habr.com/ru/companies/lamoda/articles/678932/",
+    "verified_on": "2026-09-24",
+    "verification": "Открыта статья; автор Михаил Боровиков представляется тимлидом Orders Management Lamoda; есть раздел Exactly once в Kafka.",
+    "source_type": "first_party_engineering",
+    "coverage": "Практика Outbox и дедупликации; broad claim об отсутствии exactly-once требует уточнения границ по Apache."
+  },
+  {
+    "task": "21",
+    "lang": "EN",
+    "title": "Apache Kafka — examples",
+    "url": "https://github.com/apache/kafka/tree/trunk/examples",
+    "verified_on": "2026-09-24",
+    "verification": "Открыт каталог исходного репозитория; наблюдается src/main/java/kafka/examples.",
+    "source_type": "original_source_code",
+    "coverage": "Примеры Java для изучения producer/consumer; конкретный транзакционный пример отдельно не проверялся."
+  },
+  {
+    "task": "22",
+    "lang": "EN",
+    "title": "Microsoft — Event Sourcing pattern",
+    "url": "https://learn.microsoft.com/en-us/azure/architecture/patterns/event-sourcing",
+    "verified_on": "2026-09-24",
+    "verification": "Открыта официальная страница; append-only streams, snapshots, versioning, optimistic concurrency.",
+    "source_type": "official_documentation",
+    "coverage": "Архитектурный обзор и компромиссы; не универсальный алгоритм event store."
+  },
+  {
+    "task": "22",
+    "lang": "RU",
+    "title": "Microsoft — Паттерн источника событий",
+    "url": "https://learn.microsoft.com/ru-ru/azure/architecture/patterns/event-sourcing",
+    "verified_on": "2026-09-24",
+    "verification": "Открыта RU-страница; присутствуют upcasting, snapshots, требования идемпотентности и event store vs broker.",
+    "source_type": "official_localization",
+    "coverage": "Официальная локализация того же источника, не независимое свидетельство."
+  },
+  {
+    "task": "22",
+    "lang": "EN",
+    "title": "Oskar Dudycz — EventSourcing.NetCore",
+    "url": "https://github.com/oskardudycz/EventSourcing.NetCore",
+    "verified_on": "2026-09-24",
+    "verification": "Открыт авторский репозиторий; README 6.11 Cinema Tickets Reservations with Marten, 6.8 Event Versioning.",
+    "source_type": "original_source_code",
+    "coverage": "Исследование примеров на .NET; ссылка конкретного подкаталога не добавлена, поскольку её открыть не удалось."
+  },
+  {
+    "task": "23",
+    "lang": "EN",
+    "title": "Kubernetes — CronJob",
+    "url": "https://kubernetes.io/docs/concepts/workloads/controllers/cron-jobs/",
+    "verified_on": "2026-09-24",
+    "verification": "Открыта официальная страница; ограничения запуска и рекомендация делать Jobs идемпотентными.",
+    "source_type": "official_documentation",
+    "coverage": "Поведение Kubernetes CronJob, не собственный lease/fencing алгоритм."
+  },
+  {
+    "task": "23",
+    "lang": "RU",
+    "title": "Kubernetes — CronJob (RU)",
+    "url": "https://kubernetes.io/ru/docs/concepts/workloads/controllers/cron-jobs/",
+    "verified_on": "2026-09-24",
+    "verification": "Открыта RU-страница; есть предупреждение об устаревшей локализации и описание ограничений CronJob.",
+    "source_type": "official_localization",
+    "coverage": "Введение на русском; актуальность параметров сверять с EN и версией кластера."
+  },
+  {
+    "task": "23",
+    "lang": "EN",
+    "title": "go-co-op/gocron",
+    "url": "https://github.com/go-co-op/gocron",
+    "verified_on": "2026-09-24",
+    "verification": "Открыт репозиторий; Distributed instances описывает Elector и Locker, есть distributed.go.",
+    "source_type": "original_source_code",
+    "coverage": "Интерфейсы распределённого запуска; изучить отдельно гарантии реализации Locker."
+  },
+  {
+    "task": "24",
+    "lang": "EN",
+    "title": "Debezium — PostgreSQL connector",
+    "url": "https://debezium.io/documentation/reference/stable/connectors/postgresql.html",
+    "verified_on": "2026-09-24",
+    "verification": "Открыта документация; описаны initial consistent snapshot, streaming WAL, commit offsets, restart.",
+    "source_type": "official_documentation",
+    "coverage": "Коннектор PostgreSQL; stable изменяемая ссылка, перед запуском фиксировать версию."
+  },
+  {
+    "task": "24",
+    "lang": "RU",
+    "title": "Yandex Data Transfer — Захват изменения данных",
+    "url": "https://yandex.cloud/ru/docs/data-transfer/concepts/cdc",
+    "verified_on": "2026-09-24",
+    "verification": "Открыта страница сервиса; CDC и данные в формате Debezium при передаче БД→брокер.",
+    "source_type": "official_documentation",
+    "coverage": "Контракт Yandex Data Transfer и введение в CDC; не полный перевод Debezium."
+  },
+  {
+    "task": "24",
+    "lang": "EN",
+    "title": "Debezium — PostgresStreamingChangeEventSource.java",
+    "url": "https://raw.githubusercontent.com/debezium/debezium/main/debezium-connector-postgres/src/main/java/io/debezium/connector/postgresql/PostgresStreamingChangeEventSource.java",
+    "verified_on": "2026-09-24",
+    "verification": "Открыт raw исходник, 614 строк; commitOffset, LSN, heartbeat и комментарий о filtered events.",
+    "source_type": "original_source_code",
+    "coverage": "Реальный код потокового чтения и позиции WAL, Java."
+  },
+  {
+    "task": "25",
+    "lang": "EN",
+    "title": "NGINX — ngx_stream_proxy_module",
+    "url": "https://nginx.org/en/docs/stream/ngx_stream_proxy_module.html",
+    "verified_on": "2026-09-24",
+    "verification": "Открыта официальная EN-справка модуля, 467 строк.",
+    "source_type": "official_documentation",
+    "coverage": "TCP/UDP forwarding и параметры конкретной реализации."
+  },
+  {
+    "task": "25",
+    "lang": "RU",
+    "title": "NGINX — ngx_stream_proxy_module (RU)",
+    "url": "https://nginx.org/ru/docs/stream/ngx_stream_proxy_module.html",
+    "verified_on": "2026-09-24",
+    "verification": "Открыта справка; proxy_half_close сохраняет передачу до закрытия обоих направлений, proxy_next_upstream описан.",
+    "source_type": "official_documentation",
+    "coverage": "Официальная русская документация модуля; не полный учебник TCP/UDP."
+  },
+  {
+    "task": "25",
+    "lang": "EN",
+    "title": "inetaf/tcpproxy",
+    "url": "https://github.com/inetaf/tcpproxy",
+    "verified_on": "2026-09-24",
+    "verification": "Открыт исходный репозиторий Go TCP proxy, README описывает static rules, HTTP Host, SNI.",
+    "source_type": "original_source_code",
+    "coverage": "TCP only; не реализация UDP."
+  },
+  {
+    "task": "25",
+    "lang": "EN",
+    "title": "inetaf/tcpproxy — tcpproxy.go",
+    "url": "https://raw.githubusercontent.com/inetaf/tcpproxy/master/tcpproxy.go",
+    "verified_on": "2026-09-24",
+    "verification": "Открыт raw исходник, 480 строк; DialProxy.HandleConn, CloseWrite, двунаправленное копирование.",
+    "source_type": "original_source_code",
+    "coverage": "Конкретный поток TCP forwarding и завершения направлений."
+  },
+  {
+    "task": "26",
+    "lang": "EN",
+    "title": "Linux man-pages — sendfile(2)",
+    "url": "https://man7.org/linux/man-pages/man2/sendfile.2.html",
+    "verified_on": "2026-09-24",
+    "verification": "Открыта man-page проекта Linux man-pages, 165 строк; описание, возвращаемое число байтов и ограничения.",
+    "source_type": "official_documentation",
+    "coverage": "Linux API; не гарантия zero-copy для любой ОС/TLS-конфигурации."
+  },
+  {
+    "task": "26",
+    "lang": "RU",
+    "title": "NGINX — sendfile",
+    "url": "https://nginx.org/ru/docs/http/ngx_http_core_module.html#sendfile",
+    "verified_on": "2026-09-24",
+    "verification": "Открыта core module справка; sendfile on/off, AIO platform differences, sendfile_max_chunk.",
+    "source_type": "official_documentation",
+    "coverage": "Практический пример настройки; не RU-перевод Linux syscall docs."
+  },
+  {
+    "task": "26",
+    "lang": "EN",
+    "title": "Go — internal/poll/sendfile_unix.go",
+    "url": "https://go.dev/src/internal/poll/sendfile_unix.go",
+    "verified_on": "2026-09-24",
+    "verification": "Открыт действующий исходник, SendFile, sendFile, handled/fallback, EAGAIN, различия платформ. Старое имя sendfile_linux.go не использовано.",
+    "source_type": "original_source_code",
+    "coverage": "Реальный путь системного вызова в Go; версия страницы может меняться."
+  },
+  {
+    "task": "27",
+    "lang": "EN",
+    "title": "Protocol Buffers — Encoding",
+    "url": "https://protobuf.dev/programming-guides/encoding/",
+    "verified_on": "2026-09-24",
+    "verification": "Открыто описание wire format: Base 128 Varints, field_number/wire_type, length prefix, неизвестные поля, unstable byte output.",
+    "source_type": "official_documentation",
+    "coverage": "Protobuf encoding; не MessagePack и не обещание выигрыша производительности."
+  },
+  {
+    "task": "27",
+    "lang": "RU",
+    "title": "Microsoft — Управление версиями gRPC Services",
+    "url": "https://learn.microsoft.com/ru-ru/aspnet/core/grpc/versioning?view=aspnetcore-10.0",
+    "verified_on": "2026-09-24",
+    "verification": "Открыта локализация; разобраны смена номеров полей и reserved для удалённых номеров/имён.",
+    "source_type": "official_localization",
+    "coverage": "Эволюция Protobuf/gRPC в ASP.NET; не полный wire format."
+  },
+  {
+    "task": "27",
+    "lang": "EN",
+    "title": "Protocol Buffers — Protoscope",
+    "url": "https://github.com/protocolbuffers/protoscope",
+    "verified_on": "2026-09-24",
+    "verification": "Открыт проект Protocol Buffers; Go package, wire-format disassembler, varints/length prefixes, scanner.go и tests.",
+    "source_type": "original_source_code",
+    "coverage": "Инструмент для исследования байтов и точных примеров, не production-сервис."
+  },
+  {
+    "task": "28",
+    "lang": "EN",
+    "title": "Redis — Distributed Locks with Redis",
+    "url": "https://redis.io/docs/latest/develop/clients/patterns/distributed-locks/",
+    "verified_on": "2026-09-24",
+    "verification": "Открыты Redlock algorithm и Disclaimer about consistency: fencing, non-monotonic TTL clock, ссылки на обе стороны спора.",
+    "source_type": "official_documentation",
+    "coverage": "Алгоритм и его оговорки; не гарантия защиты внешнего эффекта одним owner token."
+  },
+  {
+    "task": "28",
+    "lang": "EN",
+    "title": "Martin Kleppmann — How to do distributed locking",
+    "url": "https://martin.kleppmann.com/2016/02/08/how-to-do-distributed-locking.html",
+    "verified_on": "2026-09-24",
+    "verification": "Открыта оригинальная авторская критика 2016 года; пауза клиента, fencing token 33/34, проверки в storage.",
+    "source_type": "original_research_essay",
+    "coverage": "Критика модели и примеры нарушения; читать вместе с ответом автора."
+  },
+  {
+    "task": "28",
+    "lang": "EN",
+    "title": "Salvatore Sanfilippo — Is Redlock safe?",
+    "url": "https://www.antirez.com/news/101",
+    "verified_on": "2026-09-24",
+    "verification": "Открыт ответ автора; обсуждаются auto release, tokens, semi-synchronous model и часы.",
+    "source_type": "author_response",
+    "coverage": "Первичная противоположная позиция; не независимый результат испытаний."
+  },
+  {
+    "task": "28",
+    "lang": "EN",
+    "title": "go-redsync/redsync — mutex.go",
+    "url": "https://github.com/go-redsync/redsync/blob/master/mutex.go",
+    "verified_on": "2026-09-24",
+    "verification": "Открыт исходник через ссылку из репозитория; захват, срок владения и продление.",
+    "source_type": "original_source_code",
+    "coverage": "Go-реализация для анализа; корректность эффекта вне библиотеки."
+  },
+  {
+    "task": "28",
+    "lang": "RU",
+    "title": "Dodo Engineering — Как устроены интернет-платежи в Dodo",
+    "url": "https://habr.com/ru/companies/dododev/articles/709598/",
+    "verified_on": "2026-09-24",
+    "verification": "Открыта статья разработчика команды Дмитрия Кочнева. Раздел «Делаем процессинг надёжным и быстрым»: распределённые блокировки через БД, head-of-line blocking и переход к очередям команд по платежам.",
+    "source_type": "first_party_engineering_article",
+    "coverage": "Русский первичный практический материал о блокировках и выборе альтернативы; не спецификация Redlock и не разбор fencing. Описывает систему на момент публикации 2023 года."
+  },
+  {
+    "task": "29",
+    "lang": "EN",
+    "title": "RFC 9162 — Certificate Transparency Version 2.0",
+    "url": "https://www.rfc-editor.org/rfc/rfc9162.html",
+    "verified_on": "2026-09-24",
+    "verification": "Открыт стандарт; 2.1.3 proof сверяет вычисленный root с true root; есть consistency proofs и Signed Tree Head.",
+    "source_type": "original_standard",
+    "coverage": "Бинарное дерево журнала CT и формальные proofs; не Ethereum trie."
+  },
+  {
+    "task": "29",
+    "lang": "RU",
+    "title": "Ethereum — Префиксное дерево Меркла-Патриции",
+    "url": "https://ethereum.org/ru/developers/docs/data-structures-and-encoding/patricia-merkle-trie/",
+    "verified_on": "2026-09-24",
+    "verification": "Открыта официальная локализация, 638 строк; root, хеширование, branch/leaf/extension nodes.",
+    "source_type": "official_localization",
+    "coverage": "Более сложный Ethereum trie; не тот же формат, что RFC 9162; не использовать прогнозы roadmap как установленный факт."
+  },
+  {
+    "task": "29",
+    "lang": "EN",
+    "title": "transparency-dev/merkle",
+    "url": "https://github.com/transparency-dev/merkle",
+    "verified_on": "2026-09-24",
+    "verification": "Открыт Go-репозиторий; README описывает construction/verification; видны proof и cmd/proofgen.",
+    "source_type": "original_source_code",
+    "coverage": "Практическая библиотека Merkle proofs."
+  },
+  {
+    "task": "30",
+    "lang": "EN",
+    "title": "Bitcoin Core — PSBT Howto",
+    "url": "https://github.com/bitcoin/bitcoin/blob/master/doc/psbt.md",
+    "verified_on": "2026-09-24",
+    "verification": "Открыта документация и raw текст; роли Creator/Updater/Signer/Finalizer/Extractor, combinepsbt, finalizepsbt, multisig example link.",
+    "source_type": "official_project_documentation",
+    "coverage": "Механика PSBT/multisig; не полный проект защищённой custody."
+  },
+  {
+    "task": "30",
+    "lang": "RU",
+    "title": "Bitcoin.org — Обеспечение безопасности вашего кошелька",
+    "url": "https://bitcoin.org/ru/secure-your-wallet",
+    "verified_on": "2026-09-24",
+    "verification": "Открыта русская страница; offline wallet, небольшие суммы online, backups, несколько подписей.",
+    "source_type": "official_project_education",
+    "coverage": "Вводный материал проекта; локализация содержит старые формулировки, не банковский стандарт."
+  },
+  {
+    "task": "30",
+    "lang": "EN",
+    "title": "Bitcoin.org — Securing your wallet",
+    "url": "https://bitcoin.org/en/secure-your-wallet",
+    "verified_on": "2026-09-24",
+    "verification": "Открыта EN-страница для сопоставления с RU, 231 строка.",
+    "source_type": "official_project_education",
+    "coverage": "Дополнение по изоляции и ключам; реальных активов в учебном опыте нет."
+  }
+]

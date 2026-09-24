@@ -1,5 +1,7 @@
 # Task 03: Heavy Task Worker Pool
 
+**Материалы для разбора:** [статьи EN/RU и реальные проекты](../docs/reading-map-01-30.md#task-03) · [оценка постановки](../docs/quality-review-01-30.md) · [связи с EventLab](../docs/project-playground-01-107.md).
+
 Process background work through a **bounded worker pool**: cap parallelism, bound memory, and apply backpressure instead of spawning unbounded goroutines per request.
 
 ---

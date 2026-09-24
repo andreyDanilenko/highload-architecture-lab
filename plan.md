@@ -1,6 +1,10 @@
 # Implementation Plan: Building Scalable Backend Systems (Go + Node.js)
 
-*A proposed roadmap of 30 engineering challenges. Each sprint defines implementations and experiments; integration points are scenarios to build and validate. Check task READMEs for current implementation status.*
+*A catalogue of possible experiments. The sprint groups below are browsing aids, not a schedule or a required sequence. Check task READMEs for current implementation status.*
+
+[Articles and real projects for 01–30](docs/reading-map-01-30.md) · [Quality and scope review](docs/quality-review-01-30.md) · [EventLab and connected playgrounds for all 107 topics](docs/project-playground-01-107.md)
+
+From task 05, the default application is **EventLab: events, bookings and tickets**. It can grow through selected challenges; other experiments can become independent projects and connect later through a small interface or shared dataset. The 01–04 examples remain useful standalone baselines. The scenarios below are plans, not implemented integration.
 
 ---
 
@@ -29,11 +33,11 @@
 - Goroutine leaks in worker pools (Project 3)
 - TTL vs permanent storage for idempotency keys (Project 4)
 
-**Integration Point — Payment Processing System:**
-- Atomic inventory for stock deduction
-- Anti-bruteforce for login protection
-- Worker pool for async receipt generation
-- Test when scoped idempotency keys prevent repeated charges, including crashes between the effect and result persistence
+**Integration idea — EventLab foundations:**
+- Reserve a seat using a transaction strategy from 01
+- Protect the organizer login using the experiments from 02
+- Generate a ticket or report through the worker pool from 03
+- Compare repeated booking/payment commands using 04; the payment stays simulated
 
 ---
 
@@ -52,10 +56,10 @@
 - Cache stampede under high load (Project 6)
 - Secure token storage in cookies vs localStorage (Project 7)
 
-**Integration Point — Auth Gateway:**
-- Distributed rate limiter for login endpoints
-- Multilayer cache for session data
-- BFF patterns for mobile/web clients
+**Integration idea — EventLab API and client sessions:**
+- Run two instances of the same small application with a shared quota
+- Cache the event catalogue and observe stale data and concurrent misses
+- Build the visitor/organizer BFF around one concrete client flow
 
 ---
 
@@ -72,10 +76,10 @@
 - Partial failure handling (when one backend dies)
 - Request/response size limits
 
-**Integration Point — Unified API Entry:**
-- Gateway routes to all Sprint 1-2 services
-- Aggregates responses for complex views
-- Adds global rate limiting and auth
+**Integration idea — EventLab event page aggregation:**
+- Compose event details, availability and auxiliary data
+- Give the combined request a deadline and explicit partial-result policy
+- Keep client-specific session handling in the BFF; study transport balancing separately
 
 ---
 
@@ -95,11 +99,10 @@
 - Resharding without downtime (Project 11)
 - Connection pool exhaustion with many tenants (Project 12)
 
-**Integration Point — Multi-Tenant Analytics Platform:**
-- API Gateway routes by tenant
-- Read/Write splitter for reporting queries
-- Sharding distributes tenant data
-- RLS ensures tenant isolation
+**Integration idea — EventLab organizer data and reports:**
+- Generate reproducible event/booking datasets
+- Route reports and fresh booking reads according to their consistency needs
+- Experiment with sharding one dataset and isolating two organizers using RLS
 
 ---
 
@@ -119,11 +122,11 @@
 - SAGA compensation failures (Project 15)
 - Circuit breaker state transitions and recovery (Project 16)
 
-**Integration Point — Live Gaming Platform:**
-- Chat engine for player communication
-- Leaderboard for real-time rankings
-- SAGA for tournament rewards
-- Circuit breakers protecting against game service failures
+**Integration idea — EventLab live experience:**
+- Chat between participants and organizers with explicit reconnect behavior
+- Rank popular events from a stream of synthetic sales
+- Try reservation, simulated payment and ticket issuance as a small saga
+- Measure the response to a slow or unavailable dependency
 
 ---
 
@@ -143,11 +146,10 @@
 - Log volume and storage costs (Project 18)
 - High-cardinality metrics breaking Prometheus (Project 19)
 
-**Integration Point — Full Observability Stack:**
-- All previous services emit metrics
-- Centralized logs with correlation IDs
-- Unified dashboard showing system health
-- Load tests visualize bottlenecks
+**Integration idea — Observe one EventLab scenario:**
+- Use flags to switch one behavior during an experiment
+- Correlate logs and metrics for one booking flow
+- Compare baseline and injected failure under the same load; add only panels that answer the question
 
 ---
 
@@ -168,11 +170,11 @@
 - Split-brain in leader election (Project 23)
 - CDC initial load vs continuous streaming (Project 24)
 
-**Integration Point — Audit & Sync System:**
-- CDC captures changes covered by the configured source and retention policy
-- Event sourcing records modeled domain events; audit completeness requires explicit coverage
-- Kafka transactions coordinate offsets and output topics; external effects need destination-side coordination or idempotency
-- Scheduler attempts daily snapshots with retry, missed-run, and duplicate-effect policies
+**Integration idea — EventLab history and projections:**
+- Build a projection from booking events and test Kafka transaction boundaries
+- Try event sourcing for one aggregate rather than every module
+- Schedule expiration/report work with an explicit duplicate-effect policy
+- Use CDC to update a search copy and inspect snapshot, lag and replay
 
 ---
 
@@ -191,10 +193,10 @@
 - File descriptor limits (Project 26)
 - Schema versioning in binary protocols (Project 27)
 
-**Integration Point — CDN Edge Service:**
-- TCP proxy for connection termination
-- Zero-copy for static asset delivery
-- Binary protocol for control plane
+**Integration idea — NetLab serving EventLab files and messages:**
+- Build a TCP proxy; treat UDP as a separate experiment
+- Compare buffered I/O and a supported kernel-assisted path for the same archive
+- Compare message formats and framing using the same data and compatibility tests
 
 ---
 
@@ -213,14 +215,14 @@
 - Tree rebuilding performance (Project 29)
 - Private key management (Project 30)
 
-**Integration Point — Secure Asset Service:**
-- Compare lease-based coordination with transaction constraints for simulated withdrawals; test stale owners
-- Merkle proofs check backup contents against a trusted root; restoration needs a separate test
-- Model hot/cold signing boundaries and approval failures using simulated assets
+**Integration idea — EventLab asset and integrity experiments:**
+- Study leases and stale owners on report generation before considering financial-like actions
+- Check archive records against a trusted Merkle root
+- Keep wallet approvals and signatures in a separate simulated-asset example
 
 ---
 
-## Final Integration: The Grand System
+## Combine a selected scenario
 
 Build an integration scenario from selected components and run it under load. A challenge can remain a library or an in-process module; use a separate service when the experiment needs a network boundary:
 
@@ -254,4 +256,4 @@ Load Generator (k6) → API Gateway (08) → Selected Components → Metrics (19
 
 ---
 
-**⭐ If this roadmap helps you build real systems — star the repository and share your progress! ⭐**
+Choose a connection when it makes the mechanism easier to observe. A useful standalone experiment does not have to join the application.

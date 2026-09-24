@@ -1,68 +1,36 @@
-# 4. Advanced Idempotency (Middleware, Lua, Ownership, Observability)
+# Подзадача 4: advanced — карантин неизвестного исхода
 
-**What:** Extend the planned Redis provider with atomic record transitions (Lua scripts), HTTP middleware, ownership checks, expiry handling, metrics, and failure tests.
+**Реализация:** [advanced.go](../go/pkg/idempotency/advanced.go). **CLI:** `-provider advanced`.
 
-**Why:** To specify and test the boundaries of duplicate-effect protection and recovery. These mechanisms do not by themselves establish production readiness or exactly-once execution.
+## Шаги реализации
 
-**Status:** Planned work. A Redis owner token protects the idempotency record, not an external payment or database write. Coordinate the record and effect through a shared transaction or downstream idempotency, and reconcile unknown outcomes before an unprotected retry. Target-enforced fencing adds protection against stale-owner writes; it does not deduplicate an effect already committed by a previous valid owner.
+1. Lua Acquire читает время Redis и атомарно создаёт pending с fingerprint, owner и `lease_until_ms`.
+2. У pending **нет Redis TTL**: окончание lease не удаляет сведения о попытке.
+3. Активная попытка даёт `in_progress`. Истёкшая — `outcome_unknown`, без нового owner и без автоматического исполнения.
+4. Lua Complete проверяет состояние, owner и срок lease. Только действующий владелец сохраняет completed с `ResultTTL`.
+5. После expiry completed ключ исчезает; последующий запрос может начать новую попытку.
 
----
+`unknown` здесь — результат проверки времени, а не отдельная сохраняемая строка состояния: истёкшая запись остаётся pending. Продление lease, автоматический takeover и API разрешения карантина не реализованы.
 
-## Implementation steps
+## Предлагаемый опыт
 
-1. **HTTP middleware**
-   - Implement `IdempotencyMiddleware`:
-     - Extract `Idempotency-Key` from header for write methods (POST/PUT/PATCH/DELETE).
-     - Validate key format, scope it to the caller/operation, and reject reuse with a different request payload.
-     - Call `provider.GetOrCreate` and branch:
-       - `pending` + created → admit the current owner to execute the handler.
-       - `pending` + existing → return `409 Conflict` + `Retry-After`.
-       - `completed` → return cached response.
-       - `failed` → retry only when the effect is known to be absent or protected against duplication; otherwise reconcile the unknown outcome.
-   - Use `responseRecorder` to capture status code, headers, and body for storage.
+С запущенным Redis, из `04-idempotency/go`:
 
-2. **Lua scripts for atomicity and lock ownership**
-   - Implement Redis Lua scripts:
-     - `GetOrCreate` with lock:
-       - Atomically create or update a `pending` record with `lock_id` and `lock_expires_at`.
-       - Distinguish between "created", "locked by other", "completed", "failed".
-     - `Complete/Fail` with lock check:
-       - Ensure only the owner of the lock (`lock_id`) can finalize the record.
-   - Wire these scripts into `RedisProvider` methods (`Eval`/`EvalSha`).
+```bash
+go run ./cmd/server -provider advanced -redis-prefix lab04:advanced-experiment: -lease-ttl 100ms -payment-delay 200ms
+```
 
-3. **Lock expiry and cleanup**
-   - Background job that:
-     - Scans keys with the idempotency prefix.
-     - Detects `pending` records with expired `lock_expires_at` for recovery. Expiry does not stop the old executor or undo its effect.
-   - Define when takeover is safe, reject stale record updates, and prevent duplicate effects at the target. Retain unknown outcomes for reconciliation instead of blindly retrying.
+После первой попытки повторить тот же корректный запрос. **Ожидание для проверки:** эффект мог произойти, но поздний Complete не будет принят; повтор вернёт неизвестный исход вместо нового выполнения. Сравнить с тем же сценарием basic Redis. Фактические ответы и количество эффектов записать после запуска.
 
-4. **Metrics and logging**
-   - Add `IdempotencyMetrics`:
-     - Counters: total idempotent requests, cache hits, conflicts, errors.
-     - Histogram: operation duration (get_or_create, complete, fail).
-   - Structured logs (`IdempotencyLog`) containing:
-     - Key, operation, status, duration, request ID, error.
-   - Optional alerts in Prometheus:
-     - High conflict rate.
-     - High Redis error rate.
+Также проверить replay при достаточном lease, конфликт path/query/тела, stale owner, expiry результата и сохранение pending между экземплярами. Не смешивать namespace с другими стратегиями.
 
-5. **Configuration and tests**
-   - YAML-like config for:
-     - Default TTL, per-endpoint overrides, Redis options, lock TTL, cleanup interval.
-   - Tests:
-     - Single and duplicate requests (cache behavior).
-     - Concurrent requests with the same key during a valid lease (one active owner).
-     - Paused owner resuming after expiry and takeover; count committed effects.
-     - Crash between the effect and result storage, including an error from `Complete`.
-     - Confirmed failures versus unknown outcomes, and retries after record expiry.
-     - Basic benchmark with parallel idempotent requests.
+## Граница и цена решения
 
----
+- **Гарантия:** пока pending сохранён в общем Redis, окончание lease само по себе не допускает повтор этой попытки.
+- **Предположения:** сохранность записи и однородный протокол всех участников; время Redis используется для lease, но не делает внешний эффект атомарным.
+- **Контрпример:** eviction/удаление/потеря Redis-записи разрешат новый захват. Истечение retention завершённого ответа тоже заканчивает дедупликацию.
+- **Цена:** pending без TTL занимают память и могут бессрочно блокировать повтор. Нужны наблюдение и отдельный процесс сверки; готового такого процесса в лаборатории нет.
 
-## What will be done
+Owner token предотвращает чужой Complete, но не повтор уже выполненного внешнего эффекта. AOF или общий Redis сами по себе не объединяют эффект и ключ в транзакцию. Локальный журнал PaymentService теряется при рестарте, поэтому его недостаточно для доказательства восстановления платежа после падения.
 
-- Introduce middleware that centralizes idempotency behavior for write endpoints.
-- Make the required Redis record transitions atomic with Lua scripts and explicit lock ownership; document the separate boundary for business effects.
-- Add lock expiry handling, metrics, and structured logging.
-- Cover the provider with concurrency-focused tests and basic benchmarks.
-
+Следующий вопрос для исследования: какие сведения потребуются для сверки исхода, если эффект принадлежит внешней БД или API? Сначала записать свой ответ в [experiment-notes.md](experiment-notes.md), не заменяя неизвестный исход автоматическим удалением pending.

@@ -1,5 +1,7 @@
 # Task 02: Anti-Bruteforce Vault
 
+**Материалы для разбора:** [статьи EN/RU и реальные проекты](../docs/reading-map-01-30.md#task-02) · [оценка постановки](../docs/quality-review-01-30.md) · [связи с EventLab](../docs/project-playground-01-107.md).
+
 Protect a critical endpoint (e.g. `/login`) from password bruteforce using a **sliding window** rate limit (Sliding Window Log), implemented in Redis with Lua for atomicity and performance.
 
 ---

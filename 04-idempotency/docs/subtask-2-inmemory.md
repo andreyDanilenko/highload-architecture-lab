@@ -1,51 +1,34 @@
-# 2. In-Memory Idempotency Store
+# Подзадача 2: memory — состояние одного процесса
 
-**What:** Study an in-memory idempotency map with TTL in a single process. Deduplication lasts only while the relevant record and ownership remain valid; this does not establish exactly-once effects under failures.
+**Реализация:** [memory.go](../go/pkg/idempotency/memory.go). **CLI:** `-provider memory` — значение по умолчанию.
 
-**Why:** To introduce the idempotency pattern in the simplest possible implementation, and to surface its limitations (no persistence, no horizontal scaling). 
+## Шаги реализации
 
----
+1. Mutex защищает map. Запись связывает ключ с fingerprint, owner и временем lease.
+2. Пока lease активен, повтор получает `in_progress`; другой fingerprint (path/query/тело) — `key_mismatch`.
+3. `Complete` принимает только того же owner при активном lease и сохраняет независимую копию ответа.
+4. Завершённый ответ replay до `ResultTTL`, отсчитываемого от завершения. Истёкший ответ удаляется при обращении или проходе очистки на Acquire.
+5. Истёкший незавершённый lease остаётся в map и даёт `outcome_unknown`. Автоматического takeover нет.
 
-## Implementation steps
+`maxEntries` ограничивает количество записей. Pending нельзя вытеснять как обычный кэш: при заполнении возвращается ошибка capacity. Фоновой goroutine очистки нет; неизвестные исходы могут удерживать capacity до отдельного разбора, API которого пока нет.
 
-1. **In-memory store**
-   - Define `IdempotencyRecord` with:
-     - `Status` (`pending`, `completed`, `failed`).
-     - `ResponseCode`, `ResponseBody`, `ResponseHeaders`.
-     - `CreatedAt`, `UpdatedAt`.
-   - Implement `InMemoryProvider`:
-     - Fields: `mu sync.RWMutex`, `records map[string]*IdempotencyRecord`, `ttl time.Duration`.
-     - Methods:
-       - `GetOrCreate(ctx, key, ttl)`:
-         - If key is absent — create a `pending` record atomically.
-         - For expired records, first apply the retention and recovery policy: expiry does not prove that an earlier operation stopped or had no effect.
-         - If exists — return existing.
-       - `Complete/Fail` — update record fields; investigate how to reject completion from an old owner.
-       - Optional `Cleanup` goroutine to remove stale entries.
+## Предлагаемый опыт
 
-2. **Handler integration (manual)**
-   - For a single endpoint (e.g. `/payments`):
-     - Read `Idempotency-Key` header.
-     - If missing for POST/PUT — `400 Bad Request`.
-     - Call `provider.GetOrCreate(key, ttl)`.
-     - Behavior:
-       - If new `pending` record: execute business logic, then `Complete`.
-       - If `completed`: return stored response.
-       - If `failed`: distinguish a confirmed failure without an effect from an unknown outcome before allowing a retry.
+Из `04-idempotency/go`:
 
-3. **Limitations**
-   - Document clearly:
-     - Data is lost on restart.
-     - Multiple instances have disjoint maps — idempotency is **per instance**, not global.
-     - TTL/cleanup limits retention, but a capacity bound needs an explicit policy.
-     - The current provider has no owner token; an expired operation can finish after another request acquires the key.
-     - A crash between the business effect and result storage can permit a duplicate effect after restart.
+```bash
+go run ./cmd/server -provider memory -lease-ttl 100ms -payment-delay 200ms
+```
 
----
+Сделать корректный платёж, затем повторить тот же запрос. **Ожидание для проверки:** первый эффект может попасть в журнал после окончания lease, Complete вернёт неизвестный исход; повтор не получит нового владельца. Сопоставить HTTP-ответы и журнал, записать реальный результат отдельно.
 
-## What will be done
+Отдельно проверить обычный replay при достаточном lease, изменение path/query/тела, expiry результата и заполнение capacity.
 
-- Implement `InMemoryProvider` that satisfies a minimal `IdempotencyProvider` interface.
-- Wrap one endpoint with manual idempotency logic using this provider.
-- Document reliability and scaling limitations.
+## Граница и контрпример
 
+- **Гарантия:** пока запись сохранена в этом процессе, провайдер не допускает автоматического повторного исполнения этой незавершённой попытки.
+- **Предположения:** общий экземпляр провайдера, сохранность map, то же пространство ключей; итоговый retention ещё не истёк.
+- **Контрпример:** второй процесс имеет другую map и может выполнить тот же запрос; рестарт также теряет записи.
+- **Компромисс:** карантин уменьшает риск автоматического дубля ценой доступности и занятой памяти.
+
+Owner token защищает запись ответа, а не внешний эффект. Разбор и связь с mutex, копированием slices/maps и временем — в [experiment-notes.md](experiment-notes.md).

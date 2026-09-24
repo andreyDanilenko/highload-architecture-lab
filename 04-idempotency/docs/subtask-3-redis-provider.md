@@ -1,46 +1,34 @@
-# 3. Redis-Based Idempotency Provider
+# Подзадача 3: redis — общий ключ с TTL
 
-**What:** Replace the in-memory map with a Redis-backed `IdempotencyProvider` that can be shared across multiple instances.
+**Реализация:** [redis.go](../go/pkg/idempotency/redis.go). **CLI:** `-provider redis`.
 
-**Why:** To share idempotency state across instances and investigate concurrency, persistence and recovery. Durability depends on Redis configuration and failure behavior; TTL is a retention policy, not a durability guarantee.
+## Шаги реализации
 
-**Status:** Planned subtask. The current `RedisProvider` is a stub. Atomic Redis writes do not atomically include an external business effect.
+1. `SET NX` сохраняет pending с fingerprint и случайным owner. TTL равен lease.
+2. Если ключ занят, `GET` читает запись: конфликт fingerprint, активная работа или replay. Если ключ исчез между SET NX и GET, текущий вызов возвращает неизвестный исход, не запускает handler заново.
+3. `Complete` использует `WATCH`: читает состояние, проверяет owner и положительный TTL, затем транзакционно сохраняет completed с отдельным retention.
+4. Изменение/expiry ключа отменяет эту запись результата; старый исполнитель не должен перезаписать нового владельца.
 
----
+Несколько однородных экземпляров используют общий Redis и одинаковый prefix. Для этой стратегии выделить собственный namespace, не смешивать его с `advanced`.
 
-## Implementation steps
+## Намеренное ограничение
 
-1. **Redis-backed provider**
-   - Implement `RedisProvider` with:
-     - Fields: `client *redis.Client`, `logger *zap.Logger`, `keyPrefix string`, `lockTTL time.Duration`.
-   - Methods:
-     - `GetOrCreate(ctx, key, ttl)` using `SET NX`:
-       - If key absent, create `pending` record with `LockID` and `LockExpiresAt`.
-       - If present, deserialize JSON and return existing record.
-     - `Complete(ctx, key, response)`:
-       - Update `Status` to `completed`, store HTTP response payload, refresh TTL.
-     - `Fail(ctx, key, err)`:
-       - Update `Status` to `failed`, store error text, refresh TTL.
-     - `Get(ctx, key)` and `Cleanup(ctx, olderThan)` as needed.
+TTL удаляет сведения о pending. Это не останавливает прежнего исполнителя. После expiry следующий запрос может захватить ключ и повторить эффект. Проверка owner в Complete решает другую задачу: защищает запись ответа от чужого завершения.
 
-2. **Refactor endpoint**
-   - Replace `InMemoryProvider` with `RedisProvider` in your wiring.
-   - Ensure all instances of the service connect to the same Redis cluster.
-   - Keep the idempotency logic local to the handler (middleware will come later).
+## Предлагаемый опыт
 
-3. **Behavior under concurrency**
-   - Write a test:
-     - Start multiple goroutines sending the same `Idempotency-Key`.
-     - Verify one active owner while the lease is valid; other requests replay the result or return a conflict. Count business effects separately from handler executions.
-   - Identify race windows in record transitions, then investigate owner checks in the next subtask.
-   - Test application restart, Redis restart/failover, eviction and expiry. State which records can be lost in the tested configuration.
-   - Crash after the business effect but before `Complete`; an absent result must not be treated as proof that no effect occurred.
+С запущенным Redis, из `04-idempotency/go`:
 
----
+```bash
+go run ./cmd/server -provider redis -redis-prefix lab04:basic-experiment: -lease-ttl 100ms -payment-delay 200ms
+```
 
-## What will be done
+Повторить корректный запрос с тем же ключом после окончания первой попытки. **Ожидание для проверки:** эффект первой попытки может случиться после expiry, сохранение ответа не подтвердится; следующий запрос сможет создать ещё один эффект. Проверять журнал и HTTP отдельно. Эти строки не являются результатом выполненного запуска.
 
-- Implement `RedisProvider` that stores shared idempotency records in Redis with a defined retention window.
-- Use this provider instead of the in-memory map for a target endpoint.
-- Validate behavior under concurrent requests and across multiple instances.
+Дополнительные сценарии: обычный replay, смена path/query/тела, удаление записи, недоступный Redis, stale owner при новом захвате, expiry завершённого ответа.
 
+## Граница гарантии
+
+Атомарный SET NX охватывает ключ в Redis; WATCH/транзакция охватывают смену записи. Ни один из них не включает эффект PaymentService. Сохранность Redis, eviction, failover и retention определяют срок существования сведений о запросе. Журнал эффектов приложения остаётся в памяти каждого процесса.
+
+Повтор после неизвестного исхода с новым клиентским ключом обходил бы дедупликацию. Для устранения этой неопределённости нужен отдельный протокол эффекта и восстановления; эта базовая стратегия его не реализует. Сравнить с [advanced](subtask-4-advanced-provider.md) и записать наблюдения в [записную книжку](experiment-notes.md).

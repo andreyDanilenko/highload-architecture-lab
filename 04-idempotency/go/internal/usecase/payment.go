@@ -2,36 +2,60 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"math/rand"
+	"sync"
 	"time"
 
 	"idempotency/internal/domain"
 )
 
-// PaymentService — бизнес-логика платежа (без HTTP и без идемпотентности).
-type PaymentService struct{}
+var ErrLedgerFull = errors.New("effect ledger is full")
 
-func NewPaymentService() *PaymentService {
-	return &PaymentService{}
+// PaymentService — ограниченный журнал учебных эффектов, не банковский ledger.
+// Он не дедуплицирует запросы: дубли должны быть видны независимо от ответов middleware.
+type PaymentService struct {
+	mu         sync.Mutex
+	effects    []domain.PaymentResult
+	delay      time.Duration
+	maxEffects int
 }
 
-// ProcessPayment имитирует side-effect: списание, запись в БД, вызов PSP.
+func NewPaymentService(delay time.Duration, maxEffects int) *PaymentService {
+	return &PaymentService{delay: delay, maxEffects: maxEffects}
+}
+
 func (s *PaymentService) ProcessPayment(ctx context.Context, req *domain.PaymentRequest) (*domain.PaymentResult, error) {
-	// Шаг 1: имитация сетевой/DB задержки
-	delay := time.Duration(rand.Intn(200)) * time.Millisecond
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case <-time.After(delay):
+	// Шаг 1: проверяем инварианты и имитируем только заданную, воспроизводимую задержку.
+	if err := req.Validate(); err != nil {
+		return nil, err
 	}
-
-	// Шаг 2: имитация бизнес-ошибки (5%)
-	if rand.Float64() < 0.05 {
-		return domain.NewFailedPayment("insufficient funds"), nil
+	if s.delay > 0 {
+		timer := time.NewTimer(s.delay)
+		defer timer.Stop()
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-timer.C:
+		}
 	}
+	// Шаг 2: запись в журнал — отдельный эффект, не атомарный с хранилищем идемпотентности.
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if len(s.effects) >= s.maxEffects {
+		return nil, ErrLedgerFull
+	}
+	result := domain.PaymentResult{TransactionID: fmt.Sprintf("tx_%d", len(s.effects)+1), Status: "completed", Amount: req.Amount, FromAccount: req.FromAccountID, ToAccount: req.ToAccountID, CompletedAt: time.Now().UTC()}
+	s.effects = append(s.effects, result)
+	return &result, nil
+}
 
-	// Шаг 3: успешный платёж
-	txID := fmt.Sprintf("tx_%d_%d", time.Now().UnixNano(), rand.Intn(10000))
-	return domain.NewSuccessfulPayment(txID, req.FromAccountID, req.ToAccountID, req.Amount), nil
+// Effects возвращает снимок, чтобы чтение журнала не участвовало в изменении эффекта.
+func (s *PaymentService) Effects() []domain.PaymentResult {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return append([]domain.PaymentResult{}, s.effects...)
 }

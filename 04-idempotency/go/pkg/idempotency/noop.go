@@ -5,25 +5,22 @@ import (
 	"time"
 )
 
-// NoopProvider — subtask 1: идемпотентности нет, каждый retry = новый side-effect.
+// NoopProvider — контрольный опыт: каждый повтор снова допускается к эффекту.
 type NoopProvider struct{}
 
-func NewNoopProvider() *NoopProvider {
-	return &NoopProvider{}
+func NewNoopProvider() *NoopProvider { return &NoopProvider{} }
+func (*NoopProvider) Name() string   { return "noop" }
+
+func (*NoopProvider) Acquire(ctx context.Context, _, _ string, _ time.Duration) (Claim, error) {
+	if err := ctx.Err(); err != nil {
+		return Claim{}, err
+	}
+	owner, err := newOwner()
+	return Claim{Owner: owner}, err
 }
 
-func (p *NoopProvider) Name() string { return "noop" }
-
-func (p *NoopProvider) TryLock(_ context.Context, key string, lockTTL time.Duration) (*Record, error) {
-	return NewRecord(key, lockTTL), nil
-}
-
-func (p *NoopProvider) Complete(_ context.Context, _ string, _ any, _ error) error {
-	return nil
-}
-
-func (p *NoopProvider) GetRecord(_ context.Context, _ string) (*Record, error) {
-	return nil, ErrRecordNotFound
+func (*NoopProvider) Complete(ctx context.Context, _, _ string, _ Response, _ time.Duration) error {
+	return ctx.Err()
 }
 
 var _ Provider = (*NoopProvider)(nil)
