@@ -1,8 +1,9 @@
 module anti-bruteforce
 
-go 1.25
+go 1.23
 
 require (
+	labshared v0.0.0
 	github.com/joho/godotenv v1.5.1
 	go.uber.org/fx v1.23.0
 )
@@ -17,3 +18,5 @@ require (
 	go.uber.org/zap v1.26.0 // indirect
 	golang.org/x/sys v0.0.0-20220412211240-33da011f77ad // indirect
 )
+
+replace labshared => ../../shared/go

@@ -2,12 +2,14 @@ package domain
 
 import "time"
 
+// PaymentRequest — вход use case (без HTTP-деталей).
 type PaymentRequest struct {
 	FromAccountID string  `json:"from"`
 	ToAccountID   string  `json:"to"`
 	Amount        float64 `json:"amount"`
 }
 
+// PaymentResult — результат side-effect; кэшируется провайдером идемпотентности.
 type PaymentResult struct {
 	TransactionID string    `json:"transaction_id"`
 	Status        string    `json:"status"`

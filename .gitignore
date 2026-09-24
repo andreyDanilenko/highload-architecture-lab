@@ -9,8 +9,10 @@
 
 **/vendor/
 **/bin/
-**/pkg/
 **/*.exe
+**/.DS_Store
+# Go binaries built next to module root (go build ./cmd/server)
+**/go/server
 **/*.test
 
 **/logs/

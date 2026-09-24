@@ -1,26 +1,16 @@
 package helpers
 
 import (
-	"encoding/json"
 	"net/http"
+
+	"labshared/httpx"
 )
 
-// WriteJSON writes a JSON response with given status code.
+// WriteJSON — thin wrapper над общим labshared/httpx (единый контракт для всех лаб).
 func WriteJSON(w http.ResponseWriter, status int, payload interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	if payload == nil {
-		return
-	}
-	_ = json.NewEncoder(w).Encode(payload)
+	httpx.WriteJSON(w, status, payload)
 }
 
-// WriteError writes an error response with a simple JSON body.
 func WriteError(w http.ResponseWriter, status int, code, message string) {
-	body := map[string]string{
-		"code":    code,
-		"message": message,
-	}
-	WriteJSON(w, status, body)
+	httpx.WriteError(w, status, code, message)
 }
-

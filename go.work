@@ -1,0 +1,8 @@
+go 1.23
+
+use (
+	./02-anti-bruteforce/go
+	./03-worker-pool/go
+	./04-idempotency/go
+	./shared/go
+)
