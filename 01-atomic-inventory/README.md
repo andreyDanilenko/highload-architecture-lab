@@ -1,6 +1,6 @@
 # Task 01: Atomic Inventory Counter
 
-Reservation system under high concurrency: no negative stock, no lost updates.
+Reservation experiments under high concurrency: test for negative stock and lost updates across four strategies, including an intentionally unsafe baseline.
 
 ---
 
@@ -23,7 +23,7 @@ Requirement: `stock_quantity` must never go negative.
 
 | Pattern | What it solves | Where used in production |
 |---------|----------------|--------------------------|
-| **Pessimistic lock** | Serialize access via row lock (`SELECT FOR UPDATE`) | Strong consistency, medium load: checkout, booking |
+| **Pessimistic lock** | Serialize access via row lock (`SELECT FOR UPDATE`) | Serialize updates to locked rows: checkout, booking |
 | **Optimistic lock** | Avoid long-held locks; retry on version conflict | High load, low contention: inventory, versioned entities |
 | **Atomic counter** | Single-key atomic ops (Redis Lua, DB `SET x = x - 1`) | High RPS: stock, views, rate limits |
 | **Idempotency** | Same `requestId` → no double deduction | Retries, distributed systems |
@@ -39,9 +39,9 @@ Requirement: `stock_quantity` must never go negative.
 Implement and compare four strategies:
 
 1. **Naive** — read-modify-write, no locking. Demo only (shows lost updates).
-2. **Pessimistic** — `SELECT FOR UPDATE` in transaction. Strong consistency; blocking under contention.
+2. **Pessimistic** — `SELECT FOR UPDATE` in one transaction. Prevents lost updates when all writers follow the locking protocol; blocking under contention.
 3. **Optimistic** — `version` column + retry on conflict. No long-held locks; good when conflicts are rare.
-4. **Redis** — atomic Lua decrement, sync to PG by delta; compensating transaction on PG failure. Highest RPS.
+4. **Redis** — atomic Lua decrement, then a separate PG transaction by delta; compensation is best effort. Measure throughput and drift rather than assume this strategy is fastest.
 
 Step-by-step plans in `docs/`:
 
@@ -58,7 +58,7 @@ Step-by-step plans in `docs/`:
 - **DB:** PostgreSQL 18+ — products, stock, version; transactions (idempotency by `request_id`)
 - **Cache:** Redis 8+ — atomic Lua for Redis strategy
 - **Infra:** Docker Compose, Makefile, load-test scripts (bash, curl, jq)
-- **Reference:** Node.js 24+, Fastify, TypeScript — see [node/README.md](node/README.md); Go 1.25+ — see [go/README.md](go/README.md)
+- **Reference:** Node.js 24+, Fastify, TypeScript — see [node/README.md](node/README.md); Go 1.27+ — see [go/README.md](go/README.md)
 
 ---
 
@@ -129,8 +129,8 @@ Details: [scripts/README.md](scripts/README.md).
 | Strategy    | Main problems / risks |
 |------------|------------------------|
 | **Naive**  | Lost updates under concurrency (read–modify–write without lock). Risk of oversell. Use only for demos/load-test, not production. |
-| **Pessimistic** | High load on DB: row locks block other transactions; under contention, latency grows. Deadlocks possible if order of locking differs across requests. No lost updates; strong consistency. |
-| **Optimistic** | Retries under contention (version conflict) increase latency; many concurrent updates to same SKU can exhaust `maxOptimisticRetries`. No long-held locks; good when conflict rate is low. |
+| **Pessimistic** | High load on DB: row locks block other transactions; under contention, latency grows. Deadlocks possible if order of locking differs across requests. Prevents lost updates for writers using the same transaction/locking protocol; does not guarantee consistency across Redis and PG. |
+| **Optimistic** | Retries under contention (version conflict) increase latency; many concurrent updates to same SKU can exhaust `maxOptimisticRetries`. No lock held across the read/compute phase; the UPDATE still takes database locks. Works best when conflict rate is low. |
 | **Redis**  | Two sources of truth (Redis + PG): if PG write fails after Redis decrement, Redis stays ahead and becomes inconsistent. Requires compensating transaction (rollback in Redis) and/or reconciliation. If Redis is down, reserve path fails unless fallback to another strategy. |
 
 For Redis: compensating transaction, drift risks, and **stabilization plan** (no code) — [docs/redis-stabilization-plan.md](docs/redis-stabilization-plan.md).
@@ -144,7 +144,7 @@ For Redis: compensating transaction, drift risks, and **stabilization plan** (no
 - [ ] Load-test scripts: naive shows lost updates; pessimistic, optimistic, redis show consistency
 - [ ] Docker Compose, step-by-step plans in `docs/`
 
-**Success criterion:** 100 requests × 1 unit → final stock = initial − 100; no negative stock.
+**Success criterion for this controlled run:** with 100 distinct requests, enough initial stock and 100 confirmed commits, final stock = initial − 100. Also check non-negativity; ambiguous responses require checking committed transactions, not only HTTP success counts.
 
 ---
 

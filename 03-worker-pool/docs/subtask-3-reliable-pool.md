@@ -1,5 +1,7 @@
 # 3. Reliable Worker Pool
 
+> Implementation status: the current reliable pool adds panic recovery to bounded execution. Per-task timeouts, retries, metrics and health probes below are planned work. Context cancellation is cooperative; in-memory acceptance does not survive a process crash.
+
 **What:** Extend the bounded worker pool to be production-oriented: task timeouts, panic recovery, retries with exponential backoff + jitter, metrics, and health probes.
 
 **Why:** Under real load, tasks can hang, downstream dependencies can be flaky, and failures must be observable. “Reliable” here means predictable failure behavior + observability, not “never fails”.

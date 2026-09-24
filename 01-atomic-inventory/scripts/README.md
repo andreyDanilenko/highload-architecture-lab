@@ -80,4 +80,4 @@ After changing server code, restart `npm run dev` before the Redis test. The scr
 - **Expected stock** = initial − successful.
 - **Actual stock** — from `GET …/stock/SKU-TEST-001`.
 
-If **actual > expected** — some reserves were lost (race). If **actual === expected** — no race.
+In this controlled run, **actual > expected** indicates a mismatch consistent with lost updates; **actual === expected** means this run preserved the checked invariant. It does not prove absence of races. Transport failures can hide committed operations, so reconcile ambiguous responses against stored request IDs.

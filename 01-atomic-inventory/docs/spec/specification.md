@@ -1,4 +1,6 @@
 # Best Practices for Atomic Inventory Counter
+
+> Learning design and illustrative snippets, not a claim that these components are implemented or production-ready. Validate transaction boundaries, failure recovery and performance against the running implementation.
 ## A Comprehensive Guide to Concurrent Resource Access
 
 ---
@@ -35,13 +37,13 @@ type InventoryRequirements struct {
 
 | Strategy | Mechanism | Pros | Cons | When to Use |
 |----------|-----------|------|------|-------------|
-| **Pessimistic Lock** | `SELECT FOR UPDATE` | Guaranteed integrity, simple to understand | Locks rows, can deadlock, poor under high load | Medium load, consistency critical |
-| **Optimistic Lock** | Version column + `UPDATE WHERE version = ?` | No locks, scales well | Requires retry logic, many conflicts possible | High load, low contention |
-| **Atomic DB Ops** | `UPDATE SET count = count - 1 WHERE count > 0` | Maximum performance | Limited logic, hard with additional actions | Simple counters, no extra logic needed |
-| **Redis** | `DECR` + watch | Microsecond latency | Potential data loss, no DB transactions | Caching counters, temporary sales |
-| **Queue-based** | Order queue + worker | Full control, no race conditions | Latency, complexity | Async responses acceptable |
+| **Pessimistic Lock** | `SELECT FOR UPDATE` | Serializes updates to locked rows | Locks rows, can deadlock, poor under high load | Medium load, consistency critical |
+| **Optimistic Lock** | Version column + `UPDATE WHERE version = ?` | No lock across read/compute; UPDATE still locks | Requires retry logic, many conflicts possible | High load, low contention |
+| **Atomic DB Ops** | `UPDATE SET count = count - 1 WHERE count > 0` | Single conditional update; benchmark its cost | Limited logic, hard with additional actions | Simple counters, no extra logic needed |
+| **Redis** | `DECR` + watch | Low server-side operation cost; measure end-to-end latency | Potential data loss, no DB transactions | Caching counters, temporary sales |
+| **Queue-based** | Order queue + worker | Serializes work per key with one active consumer; retries still need idempotency | Latency, complexity | Async responses acceptable |
 
-### 2.2. Production-ready PostgreSQL Implementation
+### 2.2. Illustrative PostgreSQL Implementation
 
 ```sql
 -- Inventory table

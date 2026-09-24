@@ -936,6 +936,8 @@ Steps:
 
 **Test Case: Burst Traffic**
 
+Assume an empty quota, distinct attempt IDs, one measurement window and healthy storage. These assertions test this scenario, not every failure mode.
+
 ```
 Scenario: 1000 simultaneous requests from same IP
 
@@ -1022,7 +1024,7 @@ Assert: Attacker cannot distinguish states by timing
 
 **Storage Operations**
 - [ ] All rate limit checks use atomic operations
-- [ ] Race conditions impossible by design
+- [ ] Check/update is atomic within the stated storage boundary; verify concurrent requests and failover separately
 - [ ] Fallback strategy defined (prefer blocking on failure)
 - [ ] Storage connection pooling configured
 

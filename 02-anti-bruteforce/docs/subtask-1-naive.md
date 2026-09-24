@@ -1,7 +1,7 @@
 # 1. Naive Vault (In-Memory)
 
 **What:** In-memory store of attempts with a mutex.  
-**Why:** Show that in-memory rate limiting does not scale horizontally and has lock contention issues.
+**Why:** Show that a mutex-protected in-memory limiter enforces a local quota, not a cluster-wide quota, and can experience lock contention.
 
 ---
 
@@ -33,4 +33,4 @@
 
 - In-memory store with mutex.
 - Endpoint using this store.
-- Proof of the problem: with two app instances behind a load balancer, the effective limit is doubled per instance.
+- Proof of the problem: with two app instances behind a load balancer, the aggregate allowance can reach twice the configured per-instance limit.

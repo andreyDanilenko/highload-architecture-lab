@@ -12,12 +12,12 @@ Process background work through a **bounded worker pool**: cap parallelism, boun
 
 ## Task (overview)
 
-Implement and compare four strategies:
+Compare the current implementations and the planned extensions below. All current queues are in memory: accepting a task does not make it durable across a process crash.
 
 1. **Naive** — one goroutine per task from the handler (`202 Accepted` immediately). Demo: unbounded concurrency, lost control under load.
-2. **Bounded** — fixed workers + bounded channel; `Submit` returns error when the queue is full; graceful shutdown. Baseline production pattern.
-3. **Reliable** — bounded pool plus task timeouts, panic recovery, retries with backoff/jitter, Prometheus metrics, `/live` and `/ready`. Production-oriented reliability.
-4. **Advanced** — priorities, circuit breaker, rate limiting, dynamic worker count between min/max, explicit backpressure. High-load / SRE-style tuning.
+2. **Bounded — implemented:** fixed workers + bounded channel; `Dispatch` reports a full queue. `Stop` closes the queue and waits; ffmpeg work is cancelled, while simulated work drains. There is no shutdown deadline in the pool API.
+3. **Reliable — partial:** bounded pool with panic recovery. Per-task timeouts, retry/backoff, Prometheus metrics and meaningful `/live`/`/ready` probes remain planned.
+4. **Advanced — placeholder:** wraps the bounded pool with separate sizing. Priorities, circuit breaker, rate limiting and dynamic scaling remain planned.
 
 Step-by-step plans per subtask are in `docs/`:
 
@@ -44,18 +44,20 @@ This runs `go run cmd/server/main.go` via the root `Makefile`. Optional `.env` i
 
 ---
 
-## API (expected)
+## Current API
 
 - `POST /work/naive` — enqueue via `go` from handler; demo only.
 - `POST /work/bounded` — submit into bounded pool; backpressure when queue is full.
-- `POST /work/reliable` — same as bounded path with timeouts/retries/metrics (pool implementation differs).
-- `POST /work/advanced` — prioritized submission / advanced pool behavior.
+- `POST /work/reliable` — bounded admission and panic recovery; timeouts/retries/metrics are not implemented by this pool yet.
+- `POST /work/advanced` — delegates to the bounded pool; no priorities or dynamic scaling yet.
 
-Typical responses: `202 Accepted` / `200 OK` — task accepted or completed per design; `503 Service Unavailable` (or `429`) — queue full / overload; `500` — internal error.
+Current responses: `202 Accepted` — accepted into in-memory execution, not confirmation of completion; `503 Service Unavailable` — queue full; `500 Internal Server Error` — dispatch error; `405 Method Not Allowed` — unsupported method.
 
 ---
 
-## Testing
+## Verification targets
+
+These are experiment plans, not a report of passed checks. Planned features require implementation before their assertions can pass.
 
 - **Naive:** high RPS load test → goroutine and memory growth; downstream saturation; contrast with bounded pool under the same load.
 - **Bounded:** many concurrent submits → at most `numWorkers` tasks run in parallel; submits fail predictably when `queueSize` is exhausted; shutdown drains or times out per policy.
@@ -70,5 +72,5 @@ Typical responses: `202 Accepted` / `200 OK` — task accepted or completed per 
 |------------|------------------------|
 | **Naive**  | Unbounded goroutines and load on dependencies; no backpressure; poor shutdown semantics. Demo only. |
 | **Bounded** | Fixed capacity only; no retries/metrics until extended; tuning `numWorkers` / `queueSize` is workload-specific. |
-| **Reliable** | More moving parts (backoff, metrics cardinality); retries can amplify load on a failing dependency if misconfigured. |
-| **Advanced** | Highest complexity and tuning cost; priority inversion and CB/rate-limiter settings need careful design. |
+| **Reliable** | Currently adds panic recovery, not durable execution or retries. Planned retries require idempotent effects and a retry budget. |
+| **Advanced** | Currently shares bounded behavior. Planned prioritization and scaling add starvation, fairness and tuning risks. |

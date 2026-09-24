@@ -1,6 +1,6 @@
 # 3. Optimistic Vault (Redis WATCH)
 
-**What:** Use Redis transactions (WATCH / MULTI / EXEC) to avoid races without locks.  
+**What:** Use Redis transactions (WATCH / MULTI / EXEC) to detect conflicting changes without an application-managed lease.  
 **Why:** Show an alternative to locks and the retry load under contention.
 
 ---

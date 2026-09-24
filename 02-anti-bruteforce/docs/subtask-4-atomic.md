@@ -1,7 +1,7 @@
 # 4. Atomic Vault (Redis Lua)
 
 **What:** Atomic check and update via a Lua script on Redis.  
-**Why:** Production-ready solution with no races, no locks, and no retries.
+**Why:** Perform one check/update without command interleaving inside Redis, avoiding application-managed leases and WATCH conflict retries. Atomic execution alone does not establish durability or production readiness.
 
 ---
 
@@ -36,9 +36,11 @@
 
 ## Load testing
 
-1. **Scenario A (single IP):** 100 concurrent requests from one IP to `/vault/login`. Expect exactly 5× 200, 95× 429. No limit bypass.
+These are target assertions for a fresh key, one observation window, healthy Redis and collision-free request members. The timestamp-only `ZADD` sketch above can merge concurrent attempts with equal timestamps; give each attempt a distinct member before expecting exact counts. Validate these conditions against the actual script.
+
+1. **Scenario A (single IP):** 100 concurrent requests from one IP to `/vault/login`. Expect exactly 5× 200, 95× 429. Check that no more than five attempts are admitted in this controlled run.
 2. **Scenario B (many IPs):** 100 concurrent requests from 100 different IPs. Expect 100× 200.
-3. **Scenario C (two instances):** Run 2 app instances behind a load balancer. Repeat scenario A. Same result: 5 success, 95 blocked. Proves limit is shared across the cluster.
+3. **Scenario C (two instances):** Run 2 app instances behind a load balancer. Repeat scenario A. Same result: 5 success, 95 blocked. Checks that both instances share this Redis-backed quota in this run; failover and clock behavior need separate tests.
 
 ---
 

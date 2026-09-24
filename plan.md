@@ -1,12 +1,12 @@
 # Implementation Plan: Building Scalable Backend Systems (Go + Node.js)
 
-*A structured roadmap of 30 engineering challenges. Each sprint builds working software. Every integration point creates a real system.*
+*A proposed roadmap of 30 engineering challenges. Each sprint defines implementations and experiments; integration points are scenarios to build and validate. Check task READMEs for current implementation status.*
 
 ---
 
 ## Before You Start
 
-**Tech Stack:** Go 1.21+, Node.js 20+, PostgreSQL 16, Redis 7.2, Kafka 3.5, Docker, Prometheus, Grafana
+**Tech Stack:** Go 1.27+, Node.js 20+, PostgreSQL 16, Redis 7.2, Kafka 3.5, Docker, Prometheus, Grafana
 
 **Prerequisites:** Basic knowledge of at least one backend language, SQL, and REST APIs.
 
@@ -14,18 +14,18 @@
 
 ## Sprint 1: Foundation — Concurrency & Consistency
 
-**Goal:** Master race conditions, locks, and data integrity patterns.
+**Goal:** Investigate race conditions, locks, and data integrity through reproducible experiments.
 
 | Project | What You Build |
 |---------|----------------|
 | 01 Atomic Inventory Counter | Three concurrency strategies (pessimistic, optimistic, Redis) |
 | 02 Anti-Bruteforce Vault | Sliding window rate limiter with Redis Lua |
 | 03 Heavy Task Worker | Worker pool with semaphores and graceful shutdown |
-| 04 Idempotency Key Provider | Exactly-once request handling middleware |
+| 04 Idempotency Key Provider | Request deduplication with explicit effect, persistence, and retry boundaries |
 
 **Known Challenges:**
 - Deadlocks in pessimistic locking (Project 1)
-- Race conditions in sliding window without Lua (Project 2)
+- Races between separate Redis operations without an atomic protocol (Project 2)
 - Goroutine leaks in worker pools (Project 3)
 - TTL vs permanent storage for idempotency keys (Project 4)
 
@@ -33,7 +33,7 @@
 - Atomic inventory for stock deduction
 - Anti-bruteforce for login protection
 - Worker pool for async receipt generation
-- Idempotency keys to prevent double charges
+- Test when scoped idempotency keys prevent repeated charges, including crashes between the effect and result persistence
 
 ---
 
@@ -153,11 +153,11 @@
 
 ## Sprint 7: Event-Driven Architecture
 
-**Goal:** Master asynchronous communication at scale.
+**Goal:** Compare asynchronous delivery and processing guarantees under load and failures.
 
 | Project | What You Build |
 |---------|----------------|
-| 21 Kafka Exactly-Once | Guaranteed no-duplicate processing |
+| 21 Kafka Exactly-Once | Kafka transaction boundaries and coordination with external destinations |
 | 22 Event Sourcing | State from event history with snapshots |
 | 23 Distributed Scheduler | Cluster-wide cron with leader election |
 | 24 Change Data Capture | Stream database changes to Kafka |
@@ -169,10 +169,10 @@
 - CDC initial load vs continuous streaming (Project 24)
 
 **Integration Point — Audit & Sync System:**
-- CDC captures all database changes
-- Event sourcing stores complete audit trail
-- Kafka ensures exactly-once delivery
-- Scheduler triggers daily snapshots
+- CDC captures changes covered by the configured source and retention policy
+- Event sourcing records modeled domain events; audit completeness requires explicit coverage
+- Kafka transactions coordinate offsets and output topics; external effects need destination-side coordination or idempotency
+- Scheduler attempts daily snapshots with retry, missed-run, and duplicate-effect policies
 
 ---
 
@@ -183,7 +183,7 @@
 | Project | What You Build |
 |---------|----------------|
 | 25 TCP/UDP Proxy | L4 load balancing with raw sockets |
-| 26 Zero-Copy Server | File serving with sendfile and DMA |
+| 26 Zero-Copy Server | Compare buffered I/O and sendfile on the chosen OS and transport |
 | 27 Binary Protocol | Protobuf/MessagePack instead of JSON |
 
 **Known Challenges:**
@@ -200,7 +200,7 @@
 
 ## Sprint 9: Security & Consensus
 
-**Goal:** Implement battle-tested security patterns.
+**Goal:** Investigate security and coordination mechanisms under an explicit threat and failure model.
 
 | Project | What You Build |
 |---------|----------------|
@@ -214,27 +214,27 @@
 - Private key management (Project 30)
 
 **Integration Point — Secure Asset Service:**
-- Redlock coordinates withdrawal requests
-- Merkle tree verifies backup integrity
-- Hot/cold wallet architecture protects funds
+- Compare lease-based coordination with transaction constraints for simulated withdrawals; test stale owners
+- Merkle proofs check backup contents against a trusted root; restoration needs a separate test
+- Model hot/cold signing boundaries and approval failures using simulated assets
 
 ---
 
 ## Final Integration: The Grand System
 
-After all 30 projects, every service runs together under load:
+Build an integration scenario from selected components and run it under load. A challenge can remain a library or an in-process module; use a separate service when the experiment needs a network boundary:
 
 ```
-Load Generator (k6) → API Gateway (08) → All 30 Services → Metrics (19) → Grafana (20)
+Load Generator (k6) → API Gateway (08) → Selected Components → Metrics (19) → Grafana (20)
 ```
 
-**You'll see live:**
+**Questions to investigate:**
 - How rate limiting protects auth endpoints
-- How circuit breakers isolate failures
+- Which failure propagation paths circuit breakers limit, and which require timeouts or concurrency limits
 - How sharding distributes database load
-- How CDC keeps caches in sync
-- How zero-copy serves files efficiently
-- How Redlock coordinates distributed jobs
+- How CDC propagates changes, and how lag and lost retention affect cache freshness
+- Under which I/O and transport conditions kernel-assisted transfer improves efficiency
+- What happens to coordinated jobs when a lease expires while its worker is still running
 
 ---
 

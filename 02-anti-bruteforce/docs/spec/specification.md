@@ -1,4 +1,6 @@
 # Best Practices for Rate Limiting Implementation
+
+> Learning reference with illustrative snippets, not a verified production implementation. Validate proxy trust, time units, unique request members, weight accounting and Redis failure behavior before reusing the examples.
 ## Universal Guide for Brute Force and DoS Protection
 
 ---
@@ -6,7 +8,7 @@
 ## 1. Client Identification
 
 ### 1.1. Correct IP Address Extraction
-The most common mistake is using `req.remoteAddr` directly. In production, the application is always behind proxies (nginx, ingress, Cloudflare).
+The most common mistake is using `req.remoteAddr` directly. In production, the application often runs behind proxies (nginx, ingress, Cloudflare).
 
 **Correct Implementation:**
 
@@ -197,15 +199,17 @@ type LimitRule struct {
 
 ### 3.1. Algorithm Comparison for Different Scenarios
 
-| Algorithm | Use Case | Pros | Cons | Prod-ready |
+| Algorithm | Use Case | Pros | Cons | Requires validation |
 |-----------|----------|------|------|------------|
-| **Fixed Window** | General limits, monitoring | Simple, minimal overhead | Window boundary problem | ✅ Yes |
-| **Sliding Window Log** | Anti-brute force, precise limits | Maximally precise | High memory usage in Redis | ✅ Yes (with Lua) |
-| **Sliding Window Counter** | API limits, high load | Compromise precision/memory | Less precision than Log | ✅ Yes |
-| **Token Bucket** | Traffic shaping, burst | Supports burst, smooth | Harder to debug | ✅ Yes |
-| **Leaky Bucket** | Stable outflow | Predictable outflow | Not flexible | ⚠️ Rarely |
+| **Fixed Window** | General limits, monitoring | Simple, minimal overhead | Window boundary problem | Context-dependent |
+| **Sliding Window Log** | Anti-brute force, precise limits | Maximally precise | High memory usage in Redis | Atomic implementation and failure policy |
+| **Sliding Window Counter** | API limits, high load | Compromise precision/memory | Less precision than Log | Context-dependent |
+| **Token Bucket** | Traffic shaping, burst | Supports burst, smooth | Harder to debug | Context-dependent |
+| **Leaky Bucket** | Stable outflow | Predictable outflow | Not flexible | Workload-dependent |
 
-### 3.2. Production-ready Redis Lua Script (Sliding Window Log)
+### 3.2. Illustrative Redis Lua Script (Sliding Window Log)
+
+This sketch counts members with `ZCARD`, so its weight parameter does not implement a general weighted quota. Random suffixes do not prove member uniqueness; time units must also match. Atomic script execution does not correct these counting issues.
 
 ```lua
 -- KEYS[1] = key (e.g., "ratelimit:login:ip:192.168.1.1")

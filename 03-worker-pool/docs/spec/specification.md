@@ -1,18 +1,20 @@
 # Best Practices for Worker Pool Implementation
+
+> Illustrative design and code sketches, not the current implementation or a production-readiness claim. Reliable currently adds panic recovery; Advanced wraps Bounded. Timeouts, retries, metrics, priorities and dynamic scaling shown here are roadmap work. In-memory queues do not provide durable job execution.
 ## Universal Guide for Background Task Processing
 
 ---
 
 ## 1. Fundamental Problems and Their Solutions
 
-### 1.1. Why Simple "Goroutine per Task" Kills the System
+### 1.1. Why Unbounded Task Admission Can Overload a System
 
-**Problem:** In Go, `go func()` seems cheap, but 100k goroutines will consume all memory. In Node.js, each async call isn't free either.
+**Problem:** Goroutines and asynchronous work consume resources. Whether 100k concurrent tasks exhaust memory depends on their stacks, payloads, I/O and available resources; measure rather than assume a fixed failure threshold.
 
 ```go
 // BAD - never do this in production
 func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request) {
-    // At 10k RPS, this creates 10k goroutines -> OOM killer
+    // Active work depends on arrival rate and duration; admission here is unbounded.
     go s.processTask(r.Context(), extractTask(r))
     w.WriteHeader(http.StatusAccepted)
 }
@@ -20,7 +22,7 @@ func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request) {
 
 **Why this is bad:**
 - No concurrency limits
-- DB/Redis will crash under load spikes
+- Load spikes can saturate DB/Redis or other downstream resources
 - No control over the queue
 - Tasks are lost when server crashes
 
@@ -28,7 +30,7 @@ func (s *Server) handleRequest(w http.ResponseWriter, r *http.Request) {
 
 ---
 
-## 2. Production-Ready Worker Pool Architecture
+## 2. Proposed Worker Pool Architecture
 
 ### 2.1. Component Structure
 
@@ -934,5 +936,4 @@ A worker pool isn't just a "goroutine pool" but a critical production system com
 2. **Fail gracefully** — reject under overload, don't crash
 3. **Observe everything** — without metrics you're blind
 4. **Test failure modes** — task panic shouldn't kill the worker
-5. **Shutdown gracefully** — can't lose tasks in production
-
+5. **Shutdown deliberately** — specify drain/cancel behavior; jobs that must survive crashes need durable storage and recovery

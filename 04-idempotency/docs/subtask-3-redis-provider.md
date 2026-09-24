@@ -2,7 +2,9 @@
 
 **What:** Replace the in-memory map with a Redis-backed `IdempotencyProvider` that can be shared across multiple instances.
 
-**Why:** To make idempotency state durable (within TTL) and correct in a horizontally scaled environment.
+**Why:** To share idempotency state across instances and investigate concurrency, persistence and recovery. Durability depends on Redis configuration and failure behavior; TTL is a retention policy, not a durability guarantee.
+
+**Status:** Planned subtask. The current `RedisProvider` is a stub. Atomic Redis writes do not atomically include an external business effect.
 
 ---
 
@@ -29,14 +31,16 @@
 3. **Behavior under concurrency**
    - Write a test:
      - Start multiple goroutines sending the same `Idempotency-Key`.
-     - Ensure only one actual business operation runs; others read the stored record or fail fast.
-   - At this stage, atomicity may still be imperfect (race windows with `GET` + `SET`), which will be addressed in the next subtask.
+     - Verify one active owner while the lease is valid; other requests replay the result or return a conflict. Count business effects separately from handler executions.
+   - Identify race windows in record transitions, then investigate owner checks in the next subtask.
+   - Test application restart, Redis restart/failover, eviction and expiry. State which records can be lost in the tested configuration.
+   - Crash after the business effect but before `Complete`; an absent result must not be treated as proof that no effect occurred.
 
 ---
 
 ## What will be done
 
-- Implement `RedisProvider` that persists idempotency records in Redis with TTL.
+- Implement `RedisProvider` that stores shared idempotency records in Redis with a defined retention window.
 - Use this provider instead of the in-memory map for a target endpoint.
 - Validate behavior under concurrent requests and across multiple instances.
 

@@ -1,5 +1,7 @@
 # 4. Advanced Worker Pool
 
+> Implementation status: `advanced.Pool` currently wraps `bounded.Pool` with separate sizing. Priorities, circuit breaker, rate limiting and dynamic scaling below are planned experiments, not current endpoint behavior.
+
 **What:** Build a high-load oriented pool on top of the “reliable” baseline: priorities, explicit backpressure policies, rate limiting, circuit breaker, and dynamic worker scaling between min/max.
 
 **Why:** When multiple task types compete under overload, you need control: protect critical work, shed non-critical load early, and avoid cascading failures on downstream systems.

@@ -17,8 +17,8 @@
      - Trim old entries (client-side).
      - Check count against limit.
      - If under limit, add new entry with `ZADD`.
-     - Release lock (`DEL`).
-   - On any error, ensure lock is released.
+     - Release only if the stored owner token still matches, using an atomic compare-and-delete; a plain `DEL` can remove a newer owner’s lock.
+   - On error, attempt ownership-safe release. The lease may already have expired; release alone cannot stop a paused holder from continuing work.
 3. Endpoint `POST /resource/pessimistic`.
 4. Test: script that sends 100 concurrent requests from one IP. Measure latency and compare with naive.
 
@@ -28,4 +28,4 @@
 
 - Distributed lock mechanism.
 - Latency measurement.
-- Demonstration that locks are overkill for rate limiting.
+- Comparison of lease cost and expiry risks with a single atomic Lua check/update.

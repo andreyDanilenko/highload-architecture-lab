@@ -1,6 +1,6 @@
 # 30 Highload Engineering Challenges
 
-[![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat-square&logo=go)](https://golang.org)
+[![Go](https://img.shields.io/badge/Go-1.27+-00ADD8?style=flat-square&logo=go)](https://golang.org)
 [![Node.js](https://img.shields.io/badge/Node.js-20+-339933?style=flat-square&logo=nodedotjs)](https://nodejs.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-316192?style=flat-square&logo=postgresql)](https://www.postgresql.org/)
 [![Redis](https://img.shields.io/badge/Redis-7.2-DC382D?style=flat-square&logo=redis)](https://redis.io/)
@@ -17,28 +17,30 @@ Sometimes people believe that AI is our enemy, but fundamental knowledge will al
 IMPORTANT!
 When you use AI, you can make one small mistake. At the moment when you get an answer to your question, you need to carefully read and update your code. Otherwise, you don't learn anything and continued education will not be healthy. It creates the impression that you know a lot. That's right in part, but...
 
-A structured roadmap of 30 hands-on engineering challenges. Each project solves a real distributed systems problem and builds upon the previous ones. No theory without practice — you write code, break things, and learn why systems are designed the way they are.
+A roadmap of 30 hands-on engineering challenges, followed by optional systems and research tracks in [projects 31–60](README(31-60).md) and [projects 61–107](README(61-107).md). Each challenge explores a system behavior through implementations, failures, and measurements. The lab develops engineering thinking through experiments, failure analysis, and work within constraints. Experience operating real systems, taking responsibility for decisions, and collaborating with people complements this foundation.
 
 ---
 
-**Progress:** ▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 10% (3/30)
+**Initial implementations (subtasks vary in completeness):** ▓▓░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 10% (3/30)
 
 ---
 
 ## The Philosophy
 
-These challenges exist because building production systems requires more than knowing syntax. You'll learn to:
+These challenges provide practice in:
 
 - Choose between competing strategies (pessimistic vs optimistic locks, fixed vs sliding windows)
 - Design for failure (retries, circuit breakers, timeouts)
 - Make conscious trade-offs (consistency vs availability, latency vs throughput)
 - See the whole system, not just your service
 
-Each challenge is implemented in both Go and Node.js to understand how language concurrency models affect architecture decisions.
+The roadmap proposes Go and Node.js implementations to compare concurrency models. Availability differs by task; for example, task 01 currently has a Node.js implementation and a Go placeholder. Task READMEs distinguish current code from planned extensions.
+
+For each experiment, record the hypothesis, invariant, workload, failure model, and observed limits. Track **planned**, **implemented**, and **experimentally verified** separately. A successful demonstration supports the tested conditions; operational readiness requires validation against the intended workload and failure model.
 
 ---
 
-## Repository Structure
+## Planned Repository Structure
 
 ```
 /
@@ -63,7 +65,7 @@ Each challenge is implemented in both Go and Node.js to understand how language 
 ├── 18-log-aggregator/    # Structured logging
 ├── 19-metrics-exporter/  # Prometheus metrics
 ├── 20-grand-dashboard/   # Grafana visualization
-├── 21-kafka-exactly-once/# Exactly-once delivery
+├── 21-kafka-exactly-once/# Kafka transaction boundaries
 ├── 22-event-sourcing/    # Event store
 ├── 23-job-scheduler/     # Distributed locks
 ├── 24-cdc/               # Change Data Capture
@@ -82,7 +84,7 @@ Each challenge is implemented in both Go and Node.js to understand how language 
 *Foundation of any service. Working with threads, locks, and guarantees within a single instance.*
 
 ### 01 — Atomic Inventory Counter ✅
-**What:** Flash sale: deduct 1000 items under 100k concurrent requests without going negative.  
+**What:** Compare stock-deduction strategies under increasing contention while checking that stock never goes negative; record achieved load and hardware limits.  
 **Why:** Understand race conditions and locking strategies.  
 **Implementation:** Compare pessimistic locks (`SELECT FOR UPDATE`), optimistic locks (version column), and Redis atomic operations.  
 **What you'll learn:** Transaction isolation levels, deadlocks, and when to use each locking strategy.
@@ -100,9 +102,9 @@ Each challenge is implemented in both Go and Node.js to understand how language 
 **What you'll learn:** Goroutines vs event loop, backpressure, and task prioritization.
 
 ### 04 — Idempotency Key Provider
-**What:** Middleware guaranteeing exactly-one execution of operations.  
+**What:** Compare request-deduplication strategies and the conditions under which they prevent repeated business effects.  
 **Why:** Payment retries shouldn't charge twice.  
-**Implementation:** Store request IDs in Redis with TTL, atomic check-and-set.  
+**Implementation:** Store scoped request keys and fingerprints, replay completed results, and test failures between the business effect and result persistence. Redis atomicity alone does not cover an external effect.  
 **What you'll learn:** Idempotency patterns, exactly-once semantics, and idempotency key lifecycle.
 
 ---
@@ -113,7 +115,7 @@ Each challenge is implemented in both Go and Node.js to understand how language 
 
 ### 05 — Distributed Rate Limiter
 **What:** Rate limit across a cluster, not per instance.  
-**Why:** With load balancing, per-instance limits are useless.  
+**Why:** Per-instance limits protect each node; enforcing a shared quota requires coordination and an explicit policy for partitions.  
 **Implementation:** Redis-based sliding window with Lua.  
 **What you'll learn:** Distributed state management, clock synchronization issues, and atomic scripts.
 
@@ -125,7 +127,7 @@ Each challenge is implemented in both Go and Node.js to understand how language 
 
 ### 07 — Secure BFF (Backend for Frontend)
 **What:** Middleware for mobile/web clients handling auth and API composition.  
-**Why:** Frontends shouldn't talk directly to microservices.  
+**Why:** A BFF can centralize client-specific composition and session handling; compare its cost with direct API access.  
 **Implementation:** JWT validation, secure cookies, aggregate multiple backend calls.  
 **What you'll learn:** Token security, session management, and API composition patterns.
 
@@ -149,8 +151,8 @@ Each challenge is implemented in both Go and Node.js to understand how language 
 
 ### 10 — Read/Write Splitter
 **What:** Route reads to replicas, writes to master.  
-**Why:** Scale reads without affecting write performance.  
-**Implementation:** Detect statement type, handle replication lag.  
+**Why:** Replicas can offload reads, with replication overhead and freshness trade-offs to measure.  
+**Implementation:** Route by the operation’s consistency requirements, keep transactions on the appropriate node, and handle replication lag and read-your-writes.  
 **What you'll learn:** Leader/follower architecture, eventual consistency, and lag monitoring.
 
 ### 11 — Custom Database Sharder
@@ -172,9 +174,9 @@ Each challenge is implemented in both Go and Node.js to understand how language 
 *Instant responses and integrity in distributed systems.*
 
 ### 13 — High-Load Chat Engine
-**What:** Handle 50k+ WebSocket connections with message broadcasting.  
+**What:** Measure sustainable WebSocket connections and message fan-out under a specified resource budget.  
 **Why:** Real-time features are expected in modern apps.  
-**Implementation:** Redis Pub/Sub for cross-instance broadcast, connection management.  
+**Implementation:** Redis Pub/Sub for transient cross-instance broadcast, connection management, and explicit reconnect behavior; durable delivery requires retained messages and replay.  
 **What you'll learn:** WebSocket scaling, connection limits, and Pub/Sub patterns.
 
 ### 14 — Real-time Leaderboard
@@ -185,7 +187,7 @@ Each challenge is implemented in both Go and Node.js to understand how language 
 
 ### 15 — Distributed SAGA Orchestrator
 **What:** Distributed transaction with compensation mechanisms.  
-**Why:** Two-phase commit doesn't scale.  
+**Why:** Compare compensation-based workflows with coordinated transactions, including latency, blocking, and acceptable intermediate states.  
 **Implementation:** Orchestration-based SAGA with compensation steps.  
 **What you'll learn:** Distributed transaction patterns, compensating transactions, and failure recovery.
 
@@ -203,13 +205,13 @@ Each challenge is implemented in both Go and Node.js to understand how language 
 
 ### 17 — Dynamic Feature Toggle
 **What:** Enable/disable features without redeployment.  
-**Why:** Safe rollouts and instant kill switches.  
+**Why:** Controlled rollouts and kill switches, with measured propagation delay and fallback behavior.  
 **Implementation:** Configuration service with Redis/ETCD, runtime updates.  
 **What you'll learn:** Feature flag management, A/B testing infrastructure, and configuration distribution.
 
 ### 18 — Log Aggregator (Mini ELK)
 **What:** Collect and parse logs from all services in real-time.  
-**Why:** Debugging distributed systems requires centralized logs.  
+**Why:** Correlated, searchable logs help investigate behavior across components; evaluate delivery and storage costs.  
 **Implementation:** Structured logging, log shipping, searchable storage.  
 **What you'll learn:** Log formats, correlation IDs, and efficient log storage.
 
@@ -220,7 +222,7 @@ Each challenge is implemented in both Go and Node.js to understand how language 
 **What you'll learn:** Metrics types (counters, gauges, histograms), instrumentation, and cardinality.
 
 ### 20 — The Grand Dashboard
-**What:** Visualize all 19 services under load in Grafana.  
+**What:** Visualize a selected integration scenario under load in Grafana, comparing baseline behavior and injected failures.  
 **Why:** See the system as a whole, not individual parts.  
 **Implementation:** Load testing with k6, real-time dashboards, comparison views.  
 **What you'll learn:** Performance visualization, bottleneck identification, and system-wide observability.
@@ -232,9 +234,9 @@ Each challenge is implemented in both Go and Node.js to understand how language 
 *Asynchronous communication and stream processing.*
 
 ### 21 — Kafka Exactly-Once Delivery
-**What:** Pipeline guaranteeing no duplicate message processing.  
+**What:** Compare Kafka transactional processing with deduplication of effects in external systems; identify the boundary of each guarantee.  
 **Why:** Financial and inventory systems can't tolerate duplicates.  
-**Implementation:** Idempotent producer, transactional API, consumer idempotency.  
+**Implementation:** Idempotent producer, transactional output plus offsets, read_committed consumers, and an explicit inbox/outbox or destination-side idempotency design for external effects.  
 **What you'll learn:** Kafka semantics, exactly-once trade-offs, and transactional boundaries.
 
 ### 22 — Event Sourcing Engine
@@ -244,9 +246,9 @@ Each challenge is implemented in both Go and Node.js to understand how language 
 **What you'll learn:** Event sourcing vs CRUD, snapshot strategies, and CQRS integration.
 
 ### 23 — Distributed Job Scheduler
-**What:** Schedule jobs that run exactly once across a cluster.  
+**What:** Coordinate scheduled jobs across a cluster using leases, with explicit handling of retries and overlapping attempts.  
 **Why:** Cron on every instance runs jobs N times.  
-**Implementation:** Distributed locks, leader election, job coordination.  
+**Implementation:** Leases, leader election, durable job state, and destination-enforced fencing or idempotent effects; an expired lease does not stop the previous worker.  
 **What you'll learn:** Distributed cron, lease management, and failover handling.
 
 ### 24 — Change Data Capture (CDC)
@@ -263,19 +265,19 @@ Each challenge is implemented in both Go and Node.js to understand how language 
 
 ### 25 — Custom TCP/UDP Proxy
 **What:** Load balance traffic at the transport layer.  
-**Why:** L4 proxies are faster than L7.  
+**Why:** Transport-layer forwarding can avoid application-layer processing; compare measured overhead and required routing features.  
 **Implementation:** Raw sockets, connection forwarding, health checks.  
 **What you'll learn:** TCP handshake, connection pooling, and L4 load balancing algorithms.
 
 ### 26 — Zero-Copy File Server
 **What:** Serve files without copying through application buffers.  
 **Why:** Minimize CPU and memory for static content.  
-**Implementation:** sendfile syscall, DMA, efficient streaming.  
-**What you'll learn:** Kernel bypass, memory-mapped files, and I/O optimization.
+**Implementation:** Compare buffered I/O and sendfile where supported; document the OS, TLS path, and page-cache state.  
+**What you'll learn:** Kernel-assisted transfer, memory-mapped files, and I/O costs; sendfile still uses the kernel and is distinct from kernel bypass.
 
 ### 27 — Binary Protocol Parser
 **What:** Replace JSON with Protobuf/MessagePack.  
-**Why:** Smaller payloads, faster serialization.  
+**Why:** Compare size and serialization cost for the same payloads, implementations, and compression settings.  
 **Implementation:** Schema definition, code generation, performance comparison.  
 **What you'll learn:** Serialization formats, binary wire protocols, and schema evolution.
 
@@ -288,7 +290,7 @@ Each challenge is implemented in both Go and Node.js to understand how language 
 ### 28 — Distributed Lock Manager (Redlock)
 **What:** Distributed locks across independent services.  
 **Why:** Coordinate access to shared resources.  
-**Implementation:** Redlock algorithm with Redis, lock renewal, fencing tokens.  
+**Implementation:** Compare Redis leases and Redlock assumptions; test renewal failure and stale owners. Fencing requires a separate reliable token source and enforcement by the protected resource.  
 **What you'll learn:** Distributed locking pitfalls, clock drift, and the Redlock debate.
 
 ### 29 — Merkle Tree Validator
@@ -298,8 +300,8 @@ Each challenge is implemented in both Go and Node.js to understand how language 
 **What you'll learn:** Hash-based verification, tree synchronization, and blockchain fundamentals.
 
 ### 30 — Hot/Cold Wallet Logic
-**What:** Secure asset storage with withdrawal limits.  
-**Why:** Protect funds in production systems.  
+**What:** Model asset custody, withdrawal limits, and approval workflows using simulated assets.  
+**Why:** Explore signing boundaries, separation of duties, and auditability under a defined threat model.  
 **Implementation:** Multi-signature, withdrawal queues, approval workflows.  
 **What you'll learn:** Security architecture, transaction signing, and operational security.
 
@@ -307,7 +309,7 @@ Each challenge is implemented in both Go and Node.js to understand how language 
 
 ## Infrastructure
 
-Shared dependencies for all projects:
+Proposed shared dependencies for integration experiments; use each implemented task’s README for current run commands:
 
 ```bash
 infrastructure/
@@ -318,7 +320,7 @@ infrastructure/
 └── scripts/              # Benchmark utilities
 ```
 
-**Quick start:**
+**Target workflow for the planned shared infrastructure (not yet a runnable quick start):**
 
 ```bash
 # Start all dependencies
@@ -337,7 +339,7 @@ open http://localhost:3000
 
 ---
 
-## What You'll Master
+## Areas to Explore
 
 - **Concurrency:** Goroutines vs event loop, worker threads, atomic operations
 - **Databases:** Transactions, isolation levels, locks, sharding, replication

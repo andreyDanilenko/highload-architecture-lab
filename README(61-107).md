@@ -1,4 +1,4 @@
-# Phase 3: Master / Distinguished Engineer (Projects 61-107)
+# Phase 3: Research & Specialization (Projects 61-107)
 
 [![Rust](https://img.shields.io/badge/Rust-2021+-DEA584?style=flat-square&logo=rust)](https://www.rust-lang.org/)
 [![C++](https://img.shields.io/badge/C++-20-00599C?style=flat-square&logo=cplusplus)](https://isocpp.org/)
@@ -7,30 +7,30 @@
 [![FPGA](https://img.shields.io/badge/FPGA-Verilog-5C2D91?style=flat-square&logo=amd)](https://en.wikipedia.org/wiki/Field-programmable_gate_array)
 [![Quantum](https://img.shields.io/badge/Quantum-Qiskit-6929C4?style=flat-square&logo=ibm)](https://qiskit.org/)
 
-*Beyond engineering. Beyond architecture. Into the realm where new technologies are born.*
+*A map of research directions for testing ideas, reproducing results, and exploring unfamiliar systems.*
 
 ---
 
 ## The Mindset Shift
 
-In Phase 1, you learned to **use** technologies.  
-In Phase 2, you learned to **create** technologies.  
-In Phase 3, you learn to **invent** new paradigms.
+Phase 1 investigates **application behavior**.  
+Phase 2 investigates **internal mechanisms**.  
+Phase 3 offers directions for **focused research and specialization**.
 
-This is the difference between an architect and a distinguished engineer. Between a mechanic and an inventor. Between someone who builds tools and someone who changes how tools are built.
+Choose a question, study existing work, state your assumptions, and run an experiment that could disprove your hypothesis. Reproducing a known result or finding the limits of a design is a useful outcome.
 
-**At this level, you're not solving problems — you're redefining what problems are worth solving.**
+**These projects form an optional research map. They do not assign a career level or require mastery of every field.**
 
 ---
 
-## What You'll Master in This Phase
+## Areas to Explore in This Phase
 
 | Area | Skills |
 |------|--------|
 | **Hardware/Software Co-design** | FPGA programming, Verilog, RTL, hardware accelerators |
 | **Quantum Computing** | Quantum algorithms, Qiskit, quantum cryptography |
 | **Bioinformatics** | Genomic data processing, protein folding, DNA storage |
-| **Distributed Systems Theory** | New consensus algorithms, byzantine fault tolerance |
+| **Distributed Systems Theory** | Consensus assumptions and variations, Byzantine fault tolerance |
 | **Programming Languages** | Language design, type system research, formal verification |
 | **Operating Systems Research** | Unikernels, exokernels, capability-based security |
 | **Cryptography Research** | Post-quantum crypto, fully homomorphic encryption |
@@ -94,12 +94,12 @@ phase-3/
 ├── 96-language-design/
 ├── 97-os-concept/
 │
-├── 98-postgres-core/         # Sprint 25: Open Source Mastery
+├── 98-postgres-core/         # Sprint 25: Open Source Contribution
 ├── 99-linux-kernel/
 ├── 100-llvm-contribution/
 ├── 101-kafka-kip-lead/
 │
-├── 102-gdb-from-scratch/     # Sprint 26: Ultimate Understanding
+├── 102-gdb-from-scratch/     # Sprint 26: Systems Integration
 ├── 103-linux-from-scratch/
 ├── 104-compiler-from-scratch/
 ├── 105-database-from-scratch/
@@ -111,11 +111,11 @@ phase-3/
 
 ## Sprint 15: Hardware/Software Co-design (Projects 61-64)
 
-*When software isn't fast enough — build hardware.*
+*Measure when specialized hardware improves the full workload.*
 
 ### 61 — FPGA Accelerator
 **What:** Implement a hardware accelerator for a specific algorithm (e.g., compression, encryption) on FPGA.  
-**Why:** Understand how hardware can outperform software by orders of magnitude.  
+**Why:** Compare a specialized accelerator with a software baseline, including data transfer, latency, throughput, and resource cost.  
 **Implementation:** Verilog/VHDL, hardware description, simulation, synthesis.  
 **What you'll learn:** Hardware design, pipelining, parallelism at gate level.
 
@@ -133,7 +133,7 @@ phase-3/
 
 ### 64 — Homomorphic Encryption Hardware
 **What:** Design hardware acceleration for homomorphic encryption operations.  
-**Why:** FHE is too slow in software — hardware is the future.  
+**Why:** FHE has substantial computational costs; profile a chosen operation and investigate whether hardware acceleration improves the full workload.  
 **Implementation:** Specialized arithmetic circuits, modular multiplication.  
 **What you'll learn:** Hardware acceleration for cryptography, side-channel resistance.
 
@@ -141,23 +141,23 @@ phase-3/
 
 ## Sprint 16: Quantum Computing (Projects 65-67)
 
-*The next paradigm.*
+*Explore quantum computation with explicit assumptions and classical baselines.*
 
 ### 65 — Quantum Algorithms
 **What:** Implement Shor's algorithm or Grover's search on quantum simulators.  
-**Why:** Understand how quantum computing changes what's computable.  
+**Why:** Study how quantum algorithms change the complexity of selected problems and distinguish this from changing what is computable.  
 **Implementation:** Qiskit, quantum circuits, superposition, entanglement.  
 **What you'll learn:** Quantum gates, amplitude amplification, quantum Fourier transform.
 
 ### 66 — Quantum Cryptography
-**What:** Implement BB84 quantum key distribution.  
-**Why:** Quantum communication is unhackable by classical means.  
+**What:** Simulate BB84 quantum key distribution with noise and an explicit attacker model.  
+**Why:** BB84 illustrates how measurements can reveal eavesdropping under defined assumptions; authentication, implementation flaws, and side channels remain part of the security model.  
 **Implementation:** Qiskit, quantum states, measurement, eavesdropping detection.  
 **What you'll learn:** Quantum key distribution, no-cloning theorem, eavesdropping detection.
 
 ### 67 — Quantum Machine Learning
 **What:** Build a quantum neural network for simple classification.  
-**Why:** Quantum ML promises exponential speedups for certain problems.  
+**Why:** Compare a small quantum model with a classical baseline, accounting for data encoding, training cost, noise, and accuracy.  
 **Implementation:** Variational circuits, parameterized quantum circuits.  
 **What you'll learn:** Quantum feature maps, variational algorithms, barren plateaus.
 
@@ -181,7 +181,7 @@ phase-3/
 
 ### 70 — DNA Storage System
 **What:** Encode/decode binary data into DNA sequences.  
-**Why:** DNA is the densest storage medium known.  
+**Why:** DNA offers high potential storage density, with encoding constraints, synthesis cost, and read errors that can be modeled experimentally.  
 **Implementation:** Encoding schemes, error correction for biological media.  
 **What you'll learn:** Biological constraints, error correction, dense encoding.
 
@@ -198,21 +198,21 @@ phase-3/
 **What you'll learn:** BFT consensus, quorums, fault models.
 
 ### 72 — New Consensus Protocol
-**What:** Design and implement your own consensus protocol for a specific use case.  
+**What:** Specify and evaluate a variation of an existing consensus protocol for a defined use case.  
 **Why:** Existing protocols make trade-offs you might not need.  
-**Implementation:** Novel approach, evaluation against existing protocols.  
+**Implementation:** Explicit assumptions, safety and liveness properties, comparison with an existing protocol; document counterexamples as findings.  
 **What you'll learn:** Research methodology, protocol design, evaluation.
 
 ### 73 — Distributed Operating System
-**What:** Build an OS that treats a cluster as a single computer.  
-**Why:** Future systems will be distributed by default.  
+**What:** Prototype a bounded OS service, such as process management, that presents a cluster through a single-system interface.  
+**Why:** Investigate where location transparency helps and where network delays and partial failures must remain visible.  
 **Implementation:** Single system image, distributed process management.  
 **What you'll learn:** OS design at cluster scale, location transparency.
 
 ### 74 — Global Clock Service
-**What:** Implement TrueTime-like service (Google Spanner's secret sauce).  
-**Why:** Global consistency requires global time.  
-**Implementation:** GPS + atomic clocks, clock uncertainty, time synchronization.  
+**What:** Model a clock service with explicit uncertainty intervals, inspired by TrueTime.  
+**Why:** Bounded clock uncertainty can support externally consistent transactions, while other consistency protocols use logical ordering without synchronized physical clocks.  
+**Implementation:** Simulated clock drift and synchronization errors, uncertainty intervals, and a transaction-ordering experiment; specialized clock hardware is optional.  
 **What you'll learn:** Physical time, clock synchronization, uncertainty intervals.
 
 ---
@@ -229,7 +229,7 @@ phase-3/
 
 ### 76 — Formal Verification
 **What:** Formally verify a small program using Hoare logic or separation logic.  
-**Why:** Prove correctness, not just test for it.  
+**Why:** Prove stated properties against an explicit specification and assumptions, then test the implementation against the model.  
 **Implementation:** Pre/post conditions, invariants, proof automation.  
 **What you'll learn:** Program verification, automated theorem proving.
 
@@ -240,10 +240,10 @@ phase-3/
 **What you'll learn:** Effect typing, algebraic effects, handlers.
 
 ### 78 — Language from Idea
-**What:** Design and implement a language for a novel paradigm (e.g., probabilistic programming, differentiable programming).  
-**Why:** New problems need new languages.  
-**Implementation:** Full compiler stack, standard library, examples.  
-**What you'll learn:** Full-stack language design, novel semantics.
+**What:** Design a small language for a selected paradigm, such as probabilistic or differentiable programming, and compare it with existing approaches.  
+**Why:** Explore when dedicated syntax and semantics improve expression of a problem compared with a library.  
+**Implementation:** A bounded language specification, compiler or interpreter, small library, and comparison examples.  
+**What you'll learn:** Language semantics, implementation choices, and comparison with existing approaches.
 
 ---
 
@@ -253,31 +253,31 @@ phase-3/
 
 ### 79 — Unikernel
 **What:** Build a unikernel — application specialized to run directly on hypervisor.  
-**Why:** Minimal attack surface, fast boot, high performance.  
+**Why:** Measure the effect of a specialized runtime on attack surface, boot time, memory, performance, and observability.  
 **Implementation:** Single address space, minimal libc, hypervisor interface.  
 **What you'll learn:** OS specialization, minimalism, fast boot.
 
 ### 80 — Capability-based OS
 **What:** Implement capability-based security in a small kernel.  
-**Why:** Capabilities are more secure than ACLs.  
+**Why:** Capabilities make authority explicit and delegable; compare confinement and revocation with an ACL-based design under the same threat model.  
 **Implementation:** Capability passing, revocation, amplification.  
 **What you'll learn:** Capability security, object capabilities, confinement.
 
 ### 81 — Persistent Memory System
 **What:** Build a system that treats persistent memory as first-class.  
-**Why:** New hardware (Optane) changes the memory/storage hierarchy.  
-**Implementation:** DAX, persistent data structures, crash consistency.  
+**Why:** Persistent memory exposes the difference between a memory write becoming visible and becoming durable; these semantics can be explored in a simulator.  
+**Implementation:** Persistent data structures and simulated crashes; use DAX or suitable hardware when available, with explicit persistence-ordering assumptions.  
 **What you'll learn:** Persistent memory programming, crash consistency.
 
 ---
 
 ## Sprint 21: Cryptography Research (Projects 82-85)
 
-*Security for the next century.*
+*Study cryptographic mechanisms, assumptions, and implementation costs.*
 
 ### 82 — Post-Quantum Cryptography
-**What:** Implement a post-quantum algorithm (e.g., Kyber, Dilithium).  
-**Why:** Quantum computers break current crypto.  
+**What:** Study and benchmark standardized post-quantum algorithms such as ML-KEM and ML-DSA using established implementations; implement a bounded component for learning.  
+**Why:** A sufficiently capable quantum computer would threaten schemes such as RSA and elliptic-curve cryptography; explore migration costs and compatibility with post-quantum alternatives.  
 **Implementation:** Lattice-based cryptography, module learning with errors.  
 **What you'll learn:** Lattice crypto, NIST PQC standards.
 
@@ -289,7 +289,7 @@ phase-3/
 
 ### 84 — MPC at Scale
 **What:** Build a multi-party computation system for many parties.  
-**Why:** Multiple parties compute jointly without revealing inputs.  
+**Why:** Parties can compute an agreed result while protecting inputs under a specified threat model; account for information disclosed by the result itself.  
 **Implementation:** Secret sharing, garbled circuits, oblivious transfer.  
 **What you'll learn:** Secure computation, malicious security, efficiency.
 
@@ -337,7 +337,7 @@ phase-3/
 
 ### 90 — Global Consensus
 **What:** Implement consensus across multiple continents.  
-**Why:** True global systems require overcoming speed of light.  
+**Why:** Geographic distance imposes communication delays; measure the trade-offs between latency, availability, and the chosen consistency guarantee.  
 **Implementation:** Hierarchical consensus, geographic sharding, latency modeling.  
 **What you'll learn:** Geo-distributed systems, speed of light limits.
 
@@ -349,7 +349,7 @@ phase-3/
 
 ### 92 — Space Communication Protocols
 **What:** Design protocols for satellite constellations (like Starlink).  
-**Why:** Low-earth orbit satellites are the new backbone.  
+**Why:** Moving satellite networks offer a concrete setting for studying changing topology, intermittent links, and handover.  
 **Implementation:** Handover, routing in moving networks, laser links.  
 **What you'll learn:** Mobile networks, orbital dynamics, laser communication.
 
@@ -357,73 +357,73 @@ phase-3/
 
 ## Sprint 24: Your Own Research (Projects 93-97)
 
-*Now you create what doesn't exist.*
+*Form a focused hypothesis, compare it with prior work, and evaluate the result.*
 
 ### 93 — CRDT Research
-**What:** Invent a new CRDT for a data type that doesn't have one.  
+**What:** Investigate a CRDT design for a selected data type, starting from existing constructions and a stated invariant.  
 **Why:** Existing CRDTs don't cover all use cases.  
 **Implementation:** Mathematical proof, implementation, evaluation.  
-**What you'll learn:** Research methodology, publication.
+**What you'll learn:** Research methodology, convergence proofs, evaluation, and writing a reproducible research note.
 
 ### 94 — Novel Storage Engine
-**What:** Design a storage engine for a new hardware trend.  
-**Why:** Existing engines optimized for old hardware.  
+**What:** Investigate a storage-engine design for a defined workload and hardware model.  
+**Why:** Different workloads and hardware can change the trade-offs between layouts, indexes, and background maintenance.  
 **Implementation:** New data structures, benchmarks, analysis.  
 **What you'll learn:** Storage research, hardware trends.
 
 ### 95 — New Consensus Protocol
-**What:** Design a consensus protocol optimized for your domain (IoT, edge, etc.).  
+**What:** Continue project 72 by evaluating a protocol variation for a domain such as IoT or edge computing.  
 **Why:** Raft/Paxos make assumptions that may not hold.  
 **Implementation:** Protocol spec, implementation, evaluation.  
 **What you'll learn:** Protocol design, trade-off analysis.
 
 ### 96 — Language Design
-**What:** Design a language for a new paradigm (quantum, biological, etc.).  
-**Why:** Existing languages don't capture the paradigm well.  
+**What:** Continue project 78 with a focused language-design question in a selected domain.  
+**Why:** Compare how alternative language designs express a concrete task and which errors they prevent.  
 **Implementation:** Grammar, compiler, examples.  
 **What you'll learn:** Language design for novel domains.
 
 ### 97 — OS Concept
-**What:** Design an OS for a new hardware architecture (quantum, neuromorphic, etc.).  
-**Why:** Traditional OS assumptions don't hold.  
+**What:** Prototype one OS mechanism for a selected hardware model, such as a specialized accelerator.  
+**Why:** Identify an OS assumption affected by the selected hardware and evaluate a specific alternative.  
 **Implementation:** Kernel prototype, drivers, benchmarks.  
 **What you'll learn:** OS design for novel hardware.
 
 ---
 
-## Sprint 25: Open Source Mastery (Projects 98-101)
+## Sprint 25: Open Source Contribution (Projects 98-101)
 
 *Give back to the tools you used.*
 
 ### 98 — PostgreSQL Core Contribution
-**What:** Submit a significant patch to PostgreSQL core.  
+**What:** Prepare a focused PostgreSQL patch with a reproducible issue, tests, and a rationale, then submit it for review.  
 **Why:** Be part of the database you've used for years.  
 **Implementation:** Pick an issue, design, implement, shepherding.  
 **What you'll learn:** Large codebase navigation, community process.
 
 ### 99 — Linux Kernel Contribution
-**What:** Submit a driver or feature to Linux kernel.  
-**Why:** The kernel runs the world.  
+**What:** Prepare a bounded Linux kernel fix, test, or feature and participate in its review.  
+**Why:** Explore the design and review practices of a widely used kernel.  
 **Implementation:** Kernel development process, mailing lists, reviews.  
 **What you'll learn:** Kernel internals, upstream process.
 
 ### 100 — LLVM Contribution
 **What:** Add an optimization or feature to LLVM.  
-**Why:** LLVM powers most modern compilers.  
+**Why:** LLVM provides a widely used compiler infrastructure with established testing and review practices.  
 **Implementation:** LLVM internals, optimization passes, testing.  
 **What you'll learn:** Compiler infrastructure, code generation.
 
-### 101 — Kafka KIP Lead
-**What:** Lead a Kafka Improvement Proposal (KIP) to completion.  
-**Why:** Shape the future of event streaming.  
-**Implementation:** Proposal, community consensus, implementation, release.  
-**What you'll learn:** Open source leadership, consensus building.
+### 101 — Kafka Improvement Proposal
+**What:** Develop a Kafka improvement proposal supported by a concrete problem, alternatives, and a prototype where useful.  
+**Why:** Practice technical proposal writing and evaluating compatibility, operating costs, and community feedback.  
+**Implementation:** Proposal draft, prototype or measurements, and community review; record the feedback and resulting revisions.  
+**What you'll learn:** Open source design discussions, proposal revision, and consensus building; acceptance and release depend on the community.
 
 ---
 
-## Sprint 26: Ultimate Understanding (Projects 102-106)
+## Sprint 26: Integrating Systems Knowledge (Projects 102-106)
 
-*Build it from scratch. Everything.*
+*Connect mechanisms by building bounded, working systems.*
 
 ### 102 — GDB from Scratch
 **What:** Build a debugger that can set breakpoints and inspect memory.  
@@ -433,9 +433,9 @@ phase-3/
 
 ### 103 — Linux from Scratch
 **What:** Build your own Linux distribution from source.  
-**Why:** Understand every piece of your OS.  
+**Why:** Trace how a selected Linux system boots and connects its kernel, userspace, and build dependencies.  
 **Implementation:** Kernel compilation, bootloader, init system, package management.  
-**What you'll learn:** Full OS stack, boot process, system integration.
+**What you'll learn:** Boot process, build dependencies, and kernel/userspace integration.
 
 ### 104 — Compiler from Scratch
 **What:** Write a compiler for a real language (C subset) that generates working code.  
@@ -444,35 +444,36 @@ phase-3/
 **What you'll learn:** Full compiler pipeline, assembly, linking.
 
 ### 105 — Database from Scratch
-**What:** Build a production-worthy database (not just toy).  
-**Why:** Understand every layer of data systems.  
+**What:** Build an experimental database with a defined API, workload, durability model, and failure tests.  
+**Why:** Connect storage, query execution, transactions, and recovery, and measure where the design stops meeting its stated requirements.  
 **Implementation:** Storage, indexing, query processing, transactions, replication.  
-**What you'll learn:** Full database architecture, production concerns.
+**What you'll learn:** Database architecture, crash recovery, resource limits, and evidence needed to assess operational readiness.
 
 ### 106 — OS from Scratch
 **What:** Build a working operating system (boot to userspace).  
-**Why:** Ultimate understanding of computing.  
+**Why:** Trace how a small system boots, manages resources, and runs user programs.  
 **Implementation:** Bootloader, memory management, processes, filesystem, drivers.  
-**What you'll learn:** Full OS architecture, hardware interaction.
+**What you'll learn:** Core OS mechanisms, their integration, and hardware interaction.
 
 ---
 
-## Sprint 27: Your Own Invention (Project 107)
+## Sprint 27: Independent Investigation (Project 107)
 
-*The one that defines your career.*
+*Choose a question that you want to investigate in depth.*
 
 ### 107 — Your Original Contribution
-**What:** Invent something new. Not implement something that exists — create what doesn't.  
-**Why:** This is the peak — becoming someone who changes the field.  
-**Implementation:** Research, prototype, evaluation, publication, community.  
-**What you'll learn:** Invention, contribution to human knowledge.
+**What:** Investigate a focused question through prior work, a prototype, and a reproducible experiment.  
+**Why:** Practice forming and testing an independent argument about a system or mechanism.  
+**Implementation:** Research question, literature review, prototype, evaluation, and a research note describing results and limitations.  
+**What you'll learn:** Independent investigation and communication of findings; a replication, counterexample, or negative result is a valid outcome.
 
-**Ideas (but yours will be better):**
-- A new programming paradigm
-- A fundamentally new storage engine
-- A consensus algorithm for a new domain
+**Possible directions:**
+
+- A language feature that prevents a specific class of errors
+- A storage layout evaluated against an existing baseline
+- A protocol variation for a clearly defined failure model
 - A hardware/software co-design for a critical problem
-- A system that enables something previously impossible
+- An explanation or counterexample that clarifies the limits of an existing design
 
 ---
 
@@ -480,25 +481,28 @@ phase-3/
 
 | Aspect | Phase 1 | Phase 2 | Phase 3 |
 |--------|---------|---------|---------|
-| **Focus** | Using | Creating | Inventing |
+| **Focus** | Application experiments | Mechanism experiments | Research questions |
 | **Code** | Microservices | Systems | Research prototypes |
 | **Depth** | Applications | Components | First principles |
 | **Languages** | Go, Node.js | Go, Rust, C | Anything needed |
 | **Mindset** | "How do I use?" | "How do I build?" | "What should exist?" |
-| **Outcome** | Senior Engineer | Architect | Distinguished Engineer |
+| **Learning outcome** | Explain application behavior | Explain internal mechanisms | Form and evaluate research hypotheses |
 
 ---
 
-## Prerequisites for Phase 3
+## Choosing a Phase 3 Project
 
-Before starting Phase 3, you should have:
+Choose prerequisites for the specific experiment, rather than waiting to complete every earlier phase. A small verification model, GPU comparison, or source-code investigation can also support work in earlier projects.
 
-- Completed Phase 1 and Phase 2 (5+ years of focused work)
-- Deep expertise in multiple areas
-- Ability to read and understand academic papers
-- Willingness to learn completely new fields
-- Comfort with being a beginner again
-- **Time and space to think** — this isn't about shipping features
+For the chosen question, prepare:
+
+- Enough background to explain the baseline mechanism and its assumptions
+- A paper, specification, or established implementation to study
+- A bounded prototype and a way to evaluate it
+- Time to learn unfamiliar concepts and revise the experiment
+- A record of results, limitations, and unanswered questions
+
+No fixed number of years or completed projects is required. Adjust scope to your available time and deepen the branches that remain useful or interesting.
 
 ---
 
@@ -516,45 +520,29 @@ phase-3/infrastructure/
 
 ---
 
-## What You'll Become
+## Evidence of Learning
 
-After Phase 3, you are no longer just an engineer or architect.
+For a chosen direction, aim to demonstrate that you can:
 
-**You can:**
-- Read academic papers and implement them
-- Identify problems that don't have solutions yet
-- Invent new algorithms, protocols, and systems
-- Contribute to the core of major open source projects
-- Teach the next generation of engineers
-- Change how technology evolves
+- Read a relevant paper and explain its assumptions and contribution
+- Reproduce a result or document why your experiment differs
+- Compare a proposed change with a baseline under defined conditions
+- Find counterexamples and separate measured results from conjecture
+- Navigate a relevant codebase and prepare a reviewable change
+- Explain your findings so another person can repeat the experiment
 
-**You become the person whose work Phase 1 engineers use and Phase 2 architects study.**
-
----
-
-## The Real Truth About Phase 3
-
-Most people never get here. And that's okay — the world needs great senior engineers and architects.
-
-Phase 3 is for those who:
-- Can't stop asking "why?"
-- Need to understand first principles
-- Want to leave their mark on the field
-- Are willing to spend years on a single problem
-- Find joy in the journey, not just the destination
-
-**If Phase 1 makes you a professional, and Phase 2 makes you a master, Phase 3 makes you a pioneer.**
+A contribution can be a prototype, test, bug report, comparison, or research note. Publication, upstream acceptance, and invention are possible outcomes, not completion requirements.
 
 ---
 
 ## Final Note
 
-Projects 61-107 aren't a checklist. They're a **landscape** — showing what's possible when you've mastered the fundamentals and start exploring the frontiers.
+Projects 61-107 are a **landscape of optional directions**. Explore enough breadth to see connections, then choose where a deeper investigation is worthwhile.
 
-Some of these projects might take years. Some might lead to dead ends. Some might change your career direction entirely.
+Some experiments fit into a few sessions; others can grow into long-term work. Scope each one around a question, measurable evidence, and explicit limits. Revise or stop a branch when it has answered the question you brought to it.
 
-**That's the point.**
+The laboratory develops engineering judgment through experiments, failure analysis, and work with constraints. Operating real systems, taking responsibility for decisions, and collaborating with people add further experience to that foundation.
 
 ---
 
-**⭐ Phase 1: Senior. Phase 2: Creator. Phase 3: Pioneer. The journey never ends. ⭐**
+**Keep the questions meaningful, the experiments reproducible, and the conclusions proportional to the evidence.**

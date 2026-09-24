@@ -14,10 +14,10 @@ Simple "reset counter after N seconds" (TTL) is vulnerable: an attacker can send
 
 Implement and compare four strategies:
 
-1. **Naive** — in-memory store (Map + mutex). Demo: concurrency and scaling issues; limit is per instance.
-2. **Pessimistic** — Redis distributed lock per IP; serialize read/update/release. No races; high latency and lock contention.
-3. **Optimistic** — Redis WATCH/MULTI/EXEC; retry on conflict. No locks; many retries under contention (e.g. one IP hammering).
-4. **Atomic** — single Lua script on Redis: trim old entries, count, add if under limit. One round-trip, fully atomic. **Production approach.**
+1. **Naive** — in-memory store (Map + mutex). The mutex protects the local check/update; the limit remains per instance and shared-map contention can grow.
+2. **Pessimistic** — Redis distributed lock per IP; serialize read/update/release. Serializes cooperating callers while the lease remains valid; expiry/failover can break exclusivity. Adds latency and contention.
+3. **Optimistic** — Redis WATCH/MULTI/EXEC; retry on conflict. No application-managed lease; many retries under contention (e.g. one IP hammering).
+4. **Atomic** — single Lua script on Redis: trim old entries, count, add if under limit. One successful script invocation atomically checks/updates Redis; persistence, failover and uncertain network outcomes remain separate concerns.
 
 Step-by-step plans per subtask are in `docs/`:
 
@@ -63,7 +63,7 @@ Response: 200 — allowed; 429 — too many requests; 500 — server/Redis error
 
 | Strategy    | Main problems / risks |
 |-------------|------------------------|
-| **Naive**   | Races and lock contention in process; does not scale (limit per instance). Demo only. |
+| **Naive**   | Mutex protects local state; contention, growing key count and separate per-instance quotas remain. Does not enforce one cluster-wide quota. |
 | **Pessimistic** | High latency; lock contention; "herd blocking" when many requests wait for same lock. |
 | **Optimistic**  | Many retries under contention (same IP); extra Redis load. |
 | **Atomic**  | Lua debugging; Redis is single point of failure (fail-close or fail-open policy). |

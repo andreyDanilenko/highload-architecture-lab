@@ -1,8 +1,10 @@
 # 2. Bounded Worker Pool
 
+> Roadmap for extending the current implementation. The current pool uses a bounded channel and `Stop()` without a deadline; it cancels ffmpeg work but drains simulated work. The result queue, recovery and shutdown policy below are design targets, not completed features.
+
 **What:** Replace "goroutine per task" with a fixed-size worker pool and a bounded in-memory queue (`chan *Task`), plus graceful shutdown.
 
-**Why:** To bound parallelism and memory usage, and to ensure the system can stop safely without losing in-flight work.
+**Why:** To bound parallelism and memory usage, and to define how a planned shutdown drains or cancels work. An in-memory queue cannot preserve jobs across a process crash.
 
 ---
 
@@ -34,7 +36,7 @@
 
 4. **Graceful shutdown**
    - Implement `Shutdown(ctx context.Context) error`:
-     - Call `wp.cancel()` to signal workers to stop.
+     - Stop accepting new work. For a drain policy, close admission and let accepted work finish before cancelling; immediate cancellation instead chooses to abandon unfinished work.
      - Wait for `wp.wg.Wait()` with timeout from ctx.
      - Log whether shutdown was graceful or timed out.
    - Wire it into `main()` with OS signal handling (SIGINT/SIGTERM).
@@ -48,5 +50,5 @@
   - Bounded queue with backpressure via `ErrQueueFull`.
 - Replace naive `go` usage in handler with `pool.Submit`.
 - Add graceful shutdown so that:
-  - In-flight tasks finish.
+  - In-flight tasks finish within the configured drain budget, or are explicitly reported as cancelled/unresolved.
   - No new tasks are accepted after shutdown starts.

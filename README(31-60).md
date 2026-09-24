@@ -1,23 +1,23 @@
-# Phase 2: Creator / Architect (Projects 31-60)
+# Phase 2: Systems Internals & Architecture (Projects 31-60)
 
-[![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat-square&logo=go)](https://golang.org)
+[![Go](https://img.shields.io/badge/Go-1.27+-00ADD8?style=flat-square&logo=go)](https://golang.org)
 [![Rust](https://img.shields.io/badge/Rust-2021+-DEA584?style=flat-square&logo=rust)](https://www.rust-lang.org/)
 [![C](https://img.shields.io/badge/C-17-A8B9CC?style=flat-square&logo=c)](https://en.wikipedia.org/wiki/C_(programming_language))
 [![Kubernetes](https://img.shields.io/badge/Kubernetes-1.28-326CE5?style=flat-square&logo=kubernetes)](https://kubernetes.io/)
 [![LLVM](https://img.shields.io/badge/LLVM-16-262D3A?style=flat-square&logo=llvm)](https://llvm.org/)
 [![Linux](https://img.shields.io/badge/Linux-Kernel-FCC624?style=flat-square&logo=linux)](https://kernel.org/)
 
-A structured roadmap of 30 advanced engineering challenges. Each project moves you from using technologies to creating them — databases, compilers, consensus algorithms, and network protocols from scratch.
+A structured roadmap of 30 advanced engineering experiments. Build bounded versions of databases, compilers, consensus algorithms, and network protocols to investigate how their mechanisms work and where their guarantees end.
 
 ---
 
 ## The Mindset Shift
 
-In Phase 1, you learned to **use** technologies. You built microservices, implemented patterns, and made systems work.
+Phase 1 explores **application behavior**: services, patterns, concurrency, and failures.
 
-In Phase 2, you learn to **create** technologies. You'll build databases from scratch, implement consensus algorithms, write compilers, and touch the kernel.
+Phase 2 explores **the mechanisms inside those technologies**: storage engines, consensus, compilers, and runtimes.
 
-**This is the difference between an engineer and an architect. Between a driver and a mechanic. Between someone who uses tools and someone who builds them.**
+**The learning outcome is a stronger connection between implementation choices, system behavior, and architectural trade-offs.** Experiments develop engineering judgment; operating real systems, taking responsibility for decisions, and collaborating with people add further experience.
 
 ---
 
@@ -66,7 +66,7 @@ phase-2/
 
 ### 31 — Kubernetes Operator
 **What:** Build a custom operator that manages a complex application (e.g., PostgreSQL cluster, Redis sentinel).  
-**Why:** Operators are the standard for running stateful workloads on K8s.  
+**Why:** Operators encode application-specific operational knowledge in a reconciliation loop.  
 **Implementation:** Controller-runtime, CRDs, reconciliation loop, status handling.  
 **What you'll learn:** Kubernetes internals, custom resources, controller patterns, operator SDK.
 
@@ -84,7 +84,7 @@ phase-2/
 
 ### 34 — Multi-Cluster Management
 **What:** Deploy an application across multiple Kubernetes clusters with failover.  
-**Why:** Global scale requires multiple clusters.  
+**Why:** Multiple clusters let you explore geographic placement, failure isolation, and the cost of coordinating deployments and data.  
 **Implementation:** Cluster registration, cross-cluster service discovery, failover logic.  
 **What you'll learn:** Federation, cluster registration, cross-cluster networking, disaster recovery.
 
@@ -92,47 +92,47 @@ phase-2/
 
 ## Sprint 11: Databases from Scratch (Projects 35-41)
 
-*Stop using databases. Start understanding them.*
+*Investigate the mechanisms behind database behavior.*
 
 ### 35 — LSM-tree Storage Engine
 **What:** Build a LevelDB/RocksDB-like engine with memtables, SSTables, and compaction.  
-**Why:** LSM-trees power most modern write-optimized databases.  
+**Why:** LSM-trees expose the trade-offs between sequential writes, compaction, and read cost.  
 **Implementation:** Skip lists for memtables, sorted files, compaction strategies, bloom filters.  
 **What you'll learn:** Write amplification, read amplification, compaction, bloom filters.
 
 ### 36 — B+Tree Storage Engine
 **What:** Implement a B+Tree with buffer pool management and WAL.  
-**Why:** B+Trees power most traditional databases (PostgreSQL, MySQL).  
+**Why:** B+Tree-style indexes are widely used in relational databases and offer a useful comparison with LSM-trees.  
 **Implementation:** Node splitting, merging, buffer pool, write-ahead logging, crash recovery.  
 **What you'll learn:** Page organization, cache management, crash recovery.
 
 ### 37 — SQL Parser
 **What:** Write a parser that converts SQL into an AST (Abstract Syntax Tree).  
-**Why:** Every database needs to understand SQL.  
+**Why:** SQL parsing connects a declared query language to the internal representation used by an SQL engine.  
 **Implementation:** Lexer, parser (recursive descent or parser combinator), AST nodes.  
 **What you'll learn:** Grammar definition, parsing techniques, AST representation.
 
 ### 38 — Query Optimizer
-**What:** Build a cost-based optimizer that chooses the best execution plan.  
+**What:** Build a cost-based optimizer that selects a plan from a bounded set of alternatives using estimated costs.  
 **Why:** The optimizer makes or breaks database performance.  
 **Implementation:** Statistics collection, cost models, plan enumeration, join ordering.  
 **What you'll learn:** Cardinality estimation, join algorithms, plan selection.
 
 ### 39 — MVCC (Multi-Version Concurrency Control)
 **What:** Implement MVCC for a toy database to allow reads without blocking writes.  
-**Why:** MVCC is how modern databases achieve high concurrency.  
+**Why:** MVCC can reduce contention between readers and writers, with visibility rules and version cleanup determining its behavior.  
 **Implementation:** Version chains, visibility rules, garbage collection, snapshot isolation.  
 **What you'll learn:** Snapshot isolation, read consistency, version storage.
 
 ### 40 — Distributed Transaction Coordinator
-**What:** Build a 2PC or Percolator (Google Spanner-style) transaction coordinator.  
-**Why:** Distributed transactions are hard but necessary for consistency.  
-**Implementation:** Transaction manager, participant coordination, recovery protocols.  
-**What you'll learn:** Two-phase commit, Percolator model, failure handling.
+**What:** Build a two-phase commit coordinator and compare its design with the Percolator transaction model.  
+**Why:** Atomic updates across participants introduce coordination and recovery costs; whether they are needed depends on the required invariant.  
+**Implementation:** Transaction manager, participant coordination, durable decision log, recovery after coordinator failure.  
+**What you'll learn:** Two-phase commit, the distinct Percolator model, blocking behavior, and failure handling.
 
 ### 41 — Vector Database Engine
 **What:** Implement approximate nearest neighbor search with HNSW indexes.  
-**Why:** Vector databases are essential for AI applications.  
+**Why:** Vector indexes support similarity retrieval in applications such as semantic search; compare approximate results with exact search to measure recall, latency, and memory.  
 **Implementation:** Embeddings storage, HNSW graph construction, similarity search.  
 **What you'll learn:** Vector similarity, ANN algorithms, HNSW internals.
 
@@ -143,7 +143,7 @@ phase-2/
 *The math behind distributed systems.*
 
 ### 42 — Raft Consensus
-**What:** Full Raft implementation: leader election, log replication, snapshotting.  
+**What:** Implement and test Raft leader election, log replication, and snapshotting within an explicit failure model.  
 **Why:** Raft powers etcd, Consul, and many other distributed systems.  
 **Implementation:** Follower/candidate/leader states, heartbeats, log matching, safety.  
 **What you'll learn:** Consensus, quorum, log replication, cluster membership changes.
@@ -173,10 +173,10 @@ phase-2/
 **What you'll learn:** Ring-based routing, lookup efficiency, stabilization.
 
 ### 47 — CRDTs (Conflict-free Replicated Data Types)
-**What:** Implement G-Counter, PN-Counter, OR-Set with sync without coordination.  
-**Why:** CRDTs enable multi-master replication without conflicts.  
-**Implementation:** State-based and operation-based CRDTs, merge functions.  
-**What you'll learn:** Commutative operations, eventual consistency without coordination.
+**What:** Implement G-Counter, PN-Counter, and OR-Set with asynchronous replication.  
+**Why:** CRDTs can converge under their merge and delivery assumptions; convergence alone does not preserve every business invariant.  
+**Implementation:** State-based and operation-based CRDTs, merge functions, tests with reordered and repeated messages.  
+**What you'll learn:** Convergence, delivery requirements, and which invariants still require coordination.
 
 ### 48 — Vector Clocks
 **What:** Implement vector clocks to track causality in distributed systems.  
@@ -198,9 +198,9 @@ phase-2/
 
 ### 50 — QUIC Protocol
 **What:** Build a basic QUIC implementation over UDP.  
-**Why:** QUIC is the future (HTTP/3).  
+**Why:** QUIC provides the transport used by HTTP/3 and lets you study multiplexing, loss recovery, and connection migration.  
 **Implementation:** Connection establishment, streams, packet encryption, 0-RTT.  
-**What you'll learn:** Stream multiplexing, 0-RTT, connection migration.
+**What you'll learn:** Stream multiplexing, the replay constraints of 0-RTT, and connection migration.
 
 ### 51 — L7 Load Balancer
 **What:** Build an HTTP load balancer with caching, health checks, and sticky sessions.  
@@ -221,7 +221,7 @@ phase-2/
 **What you'll learn:** Control plane vs data plane, flow tables, network virtualization.
 
 ### 54 — VPN Protocol
-**What:** Implement a simple VPN tunnel (like WireGuard, but simpler).  
+**What:** Implement an educational encrypted tunnel using an established cryptographic library and an explicit threat model.  
 **Why:** Understand how secure tunnels work.  
 **Implementation:** TUN device, encryption, packet forwarding, MTU handling.  
 **What you'll learn:** Tunneling, encryption in transit, MTU issues.
@@ -230,7 +230,7 @@ phase-2/
 
 ## Sprint 14: Languages & Compilers (Projects 55-60)
 
-*Stop using languages. Start creating them.*
+*Connect language semantics to execution mechanisms.*
 
 ### 55 — Interpreter
 **What:** Write an interpreter for a simple language (lexer, parser, AST, eval).  
@@ -246,7 +246,7 @@ phase-2/
 
 ### 57 — JIT Compiler
 **What:** Add a simple JIT to your interpreter (compile hot paths to machine code).  
-**Why:** JITs make languages fast.  
+**Why:** Runtime compilation can accelerate suitable hot paths; measure compilation cost, warm-up, and steady-state performance.  
 **Implementation:** IR generation, machine code emission, calling convention.  
 **What you'll learn:** Runtime compilation, profiling, optimization.
 
@@ -264,7 +264,7 @@ phase-2/
 
 ### 60 — Virtual Machine
 **What:** Build a stack-based VM (like JVM or CPython bytecode).  
-**Why:** VMs power most languages.  
+**Why:** Bytecode VMs offer a useful execution model to compare with tree-walking interpreters and native compilation.  
 **Implementation:** Bytecode design, interpreter loop, stack operations, function calls.  
 **What you'll learn:** Bytecode, operand stack, frame management.
 
@@ -279,7 +279,7 @@ phase-2/
 | **Depth** | Application layer | Systems layer |
 | **Languages** | Go, Node.js | Go, Rust, C, Assembly |
 | **Mindset** | "How do I use X?" | "How would I build X?" |
-| **Outcome** | Senior Engineer | Architect / Creator |
+| **Learning outcome** | Explain application behavior and failure modes | Explain internal mechanisms and architectural trade-offs |
 
 ---
 
@@ -312,44 +312,43 @@ make test
 
 ---
 
-## What You'll Become
+## Evidence of Learning
 
-After Phase 2, you are no longer just a backend engineer.
+For each chosen project, aim to demonstrate that you can:
 
-**You can:**
-- Read the source code of PostgreSQL, Redis, or Kubernetes and understand why they're built that way
-- Contribute to open source projects at the core level
-- Build your own database if existing ones don't fit your needs
-- Design a new protocol or algorithm
-- Teach others not just how to use tools, but how to create them
+- Trace a relevant mechanism in the source code of PostgreSQL, Redis, Kubernetes, or another implementation
+- Explain the assumptions behind a guarantee and reproduce a failure when an assumption is broken
+- Compare a small implementation with an established design using a defined workload
+- Propose a bounded change or contribution supported by tests and measurements
+- Explain the mechanism and its trade-offs to another person
 
-**You become the person who creates the technologies that Phase 1 engineers use.**
+Keep the implementation, experiment conditions, results, and remaining questions together. The depth of this evidence matters more than completing every project.
 
 ---
 
-## What You'll Master
+## Areas to Explore
 
 - **Infrastructure:** Kubernetes operators, service mesh, custom schedulers, multi-cluster
 - **Databases:** LSM-trees, B+Trees, SQL parsers, query optimizers, MVCC, vector databases
 - **Distributed Systems:** Raft, Paxos, gossip, SWIM, CRDTs, vector clocks
 - **Networking:** TCP stacks, QUIC, load balancers, sidecar proxies, SDN, VPN
 - **Languages:** Interpreters, garbage collectors, JIT compilers, LLVM, virtual machines
-- **Operating Systems:** Microkernels, filesystems, device drivers, hypervisors, containers
+- **Runtime and OS boundaries:** Scheduling, memory management, sockets, process interfaces
 
 ---
 
 ## Next Steps
 
-When you complete Phase 2, you're ready for:
+Choose a Phase 3 direction when its question interests you and you can identify the relevant prerequisites. You do not need to finish every Phase 2 project first.
 
-### Phase 3: Master / Distinguished Engineer (Projects 61-107)
+### Phase 3: Research & Specialization (Projects 61-107)
 - Global-scale systems
 - AI-powered infrastructure
 - Quantum-resistant cryptography
 - Research-level systems design
 - Open source contribution to major projects
-- Building tools from scratch (Git, Docker, grep, curl)
+- Building bounded versions of debuggers, compilers, databases, and operating systems
 
 ---
 
-**⭐ Phase 1 made you a senior. Phase 2 makes you a creator. The journey continues. ⭐**
+**Carry forward the mechanisms you can explain, the failures you can reproduce, and the questions you want to investigate next.**

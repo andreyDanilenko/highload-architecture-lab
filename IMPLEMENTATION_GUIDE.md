@@ -1,17 +1,19 @@
 # Руководство по отработке задач: уровни сложности и стратегии реализации
 
-> Документ для Senior/Lead инженеров: план реализации, альтернативные решения, оптимизации и чеклисты для каждой из 30 задач.
+> План исследовательских упражнений: альтернативные решения, измерения и проверки для каждой из 30 задач. Разделы описывают намеченные эксперименты; состояние реализации указано в README конкретной задачи.
 
 ---
 
 ## Легенда уровней
 
-| Уровень | Описание | Критичность |
-|---------|----------|-------------|
-| **L1** | Базовая реализация, MVP | Низкая |
-| **L2** | Production-ready с edge cases | Средняя |
-| **L3** | High-load, оптимизации, мониторинг | Высокая |
-| **L4** | Enterprise: отказоустойчивость, multi-region | Критическая |
+| Уровень | Область эксперимента | Что проверить |
+|---------|---------------------|---------------|
+| **L1** | Базовая реализация | Основной сценарий и инвариант |
+| **L2** | Граничные случаи | Конкуренция, ошибки и восстановление |
+| **L3** | Нагрузка и оптимизация | Пределы ресурсов и стоимость решения |
+| **L4** | Распределённые отказы | Разделение сети, смена владельца, восстановление данных |
+
+Уровни обозначают глубину опыта. Готовность к эксплуатации оценивается отдельно по требованиям конкретной системы и результатам проверок. Для каждой гарантии фиксируйте область действия, предположения и сценарии отказа; различайте «запланировано», «реализовано» и «проверено».
 
 ---
 
@@ -22,16 +24,16 @@
 **Уровни проблемы:**
 - **L1:** Race condition при вычитании, отрицательный остаток
 - **L2:** Deadlock при высокой конкуренции, throughput degradation
-- **L3:** 100k RPS, latency spikes, connection pool exhaustion
+- **L3:** Точка насыщения на выбранном стенде, latency spikes, connection pool exhaustion
 - **L4:** Distributed inventory, eventual consistency across DC
 
 **Стратегии решения:**
 
 | Стратегия | Плюсы | Минусы | Когда использовать |
 |-----------|-------|--------|---------------------|
-| Pessimistic (SELECT FOR UPDATE) | Гарантия ACID, простота | Блокировки, deadlocks | Низкая конкуренция, критичные данные |
-| Optimistic (version column) | Меньше блокировок, лучше throughput | Retry storms при конфликтах | Средняя конкуренция |
-| Redis INCR/DECR | O(1), минимальная latency | Доп. система, eventual sync | Высокий RPS, flash sales |
+| Pessimistic (SELECT FOR UPDATE) | Сериализация доступа к заблокированной строке внутри транзакции | Блокировки, deadlocks; остальные инварианты требуют отдельной проверки | Изменения общих строк при допустимом ожидании |
+| Optimistic (version column) | Обнаружение конфликтов; возможный выигрыш при редких конфликтах | Retry storms; стоимость сравнивается на одинаковой нагрузке | Нагрузка с измеренной частотой конфликтов |
+| Redis INCR/DECR | O(1) для отдельной команды; измеряемая latency | Проверка остатка вместе с изменением требует атомарного протокола; синхронизация с БД — отдельная задача | Опыт с горячими счётчиками и явными требованиями к сохранности |
 | PostgreSQL advisory locks | Гибкость, именованные блокировки | Сложнее отладка | Специфичные сценарии |
 
 **План реализации:**
@@ -39,7 +41,7 @@
 2. Добавить EXPLAIN ANALYZE для медленных запросов
 3. Настроить connection pooling (PgBouncer)
 4. Метрики: conflict rate, p99 latency, throughput
-5. Load test: k6 с ramp-up до 100k concurrent
+5. Load test: k6 с ростом нагрузки до насыщения стенда; отдельно фиксировать RPS, concurrency, распределение запросов и ресурсы
 
 **Оптимизации:**
 - Batch decrements (резервировать N единиц за один запрос)
@@ -69,7 +71,7 @@
 **План реализации:**
 1. Lua script: атомарный ZADD + ZREMRANGEBYSCORE + ZCARD
 2. Progressive delay: exponential backoff в Lua или приложении
-3. Rate limit на сам vault endpoint (защита от DDoS)
+3. Rate limit на vault endpoint для ограничения принятой работы; защиту канала и инфраструктуры от DDoS рассматривать отдельно
 4. Метрики: failed_attempts, lockout_duration, script_execution_time
 
 **Оптимизации:**
@@ -120,20 +122,20 @@
 
 | Подход | Хранение | Гарантии |
 |--------|----------|----------|
-| Redis SET NX | In-memory | Fast, но при потере — дубликаты |
-| PostgreSQL UNIQUE | Durable | Медленнее, ACID |
-| Hybrid | Redis + async to PG | Best of both |
+| Redis SET NX | Redis | Атомарный захват ключа в Redis; TTL, failover и внешний эффект ограничивают гарантию |
+| PostgreSQL UNIQUE | PostgreSQL | Дедупликация эффекта в БД, если ключ, эффект и результат фиксируются одной транзакцией; внешний API требует своего протокола |
+| Hybrid | Redis + async to PG | Есть окно потери до записи в PG; нужны восстановление и явное определение источника истины |
 
 **План реализации:**
-1. Middleware: извлечь X-Idempotency-Key из header
+1. Middleware: извлечь Idempotency-Key, определить tenant/operation scope и fingerprint тела запроса
 2. Redis: SET key NX EX TTL с payload (request hash)
-3. При NX=0: вернуть cached response (если сохранён)
-4. Response caching: сохранять результат успешной операции
+3. При существующем ключе: проверить fingerprint, вернуть завершённый результат или статус обработки
+4. Проверить падение между эффектом и сохранением результата: Lua атомарен в Redis, но не объединяет Redis с БД или внешним API в одну транзакцию
 
 **Оптимизации:**
-- Key format: `{tenant}:{operation}:{hash}` — изоляция
-- TTL = max(operation_timeout * 2, 24h)
-- Lua script для atomic check-and-set-and-store
+- Key format: `{tenant}:{operation}:{client_key}`; fingerprint хранить отдельно для обнаружения конфликта тела
+- Срок хранения результата выбирать по окну допустимых повторов, отдельно от lease TTL; истечение lease не доказывает остановку исполнителя
+- Lua script для атомарного перехода записи в Redis с проверкой владельца; сохранность и внешний эффект проверять отдельно
 
 ---
 
@@ -142,7 +144,7 @@
 ### 05 — Distributed Rate Limiter
 
 **Уровни проблемы:**
-- **L1:** Per-instance limit бесполезен за LB
+- **L1:** Per-instance limit защищает узел, но не задаёт точную общую квоту за LB
 - **L2:** Clock skew между инстансами
 - **L3:** Redis single point of failure
 - **L4:** Multi-tenant, разные лимиты по ключу
@@ -182,15 +184,15 @@
 | Паттерн | Описание | Consistency |
 |---------|----------|-------------|
 | Cache-aside | App управляет | Best effort |
-| Read-through | Cache прозрачно | TTL-based |
-| Write-through | Write в cache+DB | Strong |
-| Refresh-ahead | Probabilistic early expire | Eventual |
+| Read-through | Cache загружает данные при miss | Зависит от TTL, инвалидации и поведения при отказах |
+| Write-through | Запись в cache и DB по выбранному протоколу | Зависит от порядка записи, отказов и чтения других узлов; строгая согласованность не следует из названия |
+| Refresh-ahead | Обновление до expiry | Свежесть зависит от успешного refresh, правил чтения и отказов |
 
 **План реализации:**
-1. L1: sync.Map (Go) / LRU (Node) с TTL
+1. L1: ограниченный по памяти cache с TTL и политикой вытеснения; sync.Map сам по себе этих механизмов не предоставляет
 2. L2: Redis с тем же key schema
-3. Single flight: один запрос на miss — остальные ждут
-4. Probabilistic early expiration: `expire * (0.8 + 0.2*rand)` 
+3. Single flight: объединять concurrent misses одного ключа в пределах процесса; между процессами проверять отдельный механизм координации
+4. TTL jitter: `expire * (0.8 + 0.2*rand)` распределяет истечения во времени. Probabilistic early refresh — отдельный алгоритм, учитывающий время до expiry и стоимость пересчёта.
 
 **Оптимизации:**
 - Медленные запросы: кэшировать дольше, отдельный TTL
@@ -262,19 +264,19 @@
 ### 09 — Terabyte Data Mocker
 
 **Уровни проблемы:**
-- **L1:** Single INSERT — тысячи запросов/сек
+- **L1:** Single INSERT — измерить стоимость одного запроса и фиксации
 - **L2:** Index creation блокирует INSERT
 - **L3:** WAL, checkpoint, disk I/O bottleneck
 - **L4:** Distributed generation, partitioning
 
 **Стратегии решения:**
 
-| Метод | Throughput | Когда |
-|-------|------------|-------|
-| Batch INSERT (100-1000 rows) | 10-50k rows/s | Универсально |
-| COPY FROM | 100-500k rows/s | Bulk load |
-| UNLOGGED table | 2x faster | Temp data, можно потерять |
-| Partitioning | Parallel load | Большие таблицы |
+| Метод | Что измерить | Условия |
+|-------|-------------|---------|
+| Batch INSERT | Throughput и latency при разных размерах batch | Одинаковые индексы, транзакции и данные |
+| COPY FROM | Throughput, CPU и объём WAL относительно INSERT | Тот же набор данных и настройки сохранности |
+| UNLOGGED table | Изменение скорости и WAL | Допустима потеря содержимого при сбое; ограничения репликации |
+| Partitioning | Эффект параллельной загрузки и перекоса данных | Число partitions, диск и CPU стенда |
 
 **План реализации:**
 1. COPY с stdin stream
@@ -303,15 +305,15 @@
 | Стратегия | Consistency | Complexity |
 |-----------|-------------|------------|
 | Random replica | Eventual | Low |
-| Lag-aware routing | Better | Medium |
-| Session stickiness | Read-your-writes | Medium |
-| Sync replica wait | Strong | High latency |
+| Lag-aware routing | Снижает риск устаревания; измеренный lag не гарантирует видимость конкретной записи | Medium |
+| Session stickiness | Read-your-writes при чтении из того же актуального primary и обработке failover | Medium |
+| Wait for replay LSN | Выбранная replica применила нужную запись; уровень изоляции проверяется отдельно | Дополнительное ожидание и timeout |
 
 **План реализации:**
-1. Parse SQL: SELECT → replica, INSERT/UPDATE/DELETE → master
-2. Transaction: весь transaction на master
-3. `pg_stat_replication` для lag monitoring
-4. При lag > threshold: route to master
+1. Задать контракт операции: допускается ли stale read, нужен ли read-your-writes, есть ли блокировки или побочные эффекты; тип SELECT сам по себе этого не определяет
+2. Записи и связанные транзакции выполнять на primary; не разделять одну транзакцию между соединениями
+3. `pg_stat_replication` для lag monitoring; для read-your-writes проверять применение нужного LSN на выбранной replica
+4. При невыполнении требования свежести: ждать до deadline или читать с primary по заданной политике
 
 **Оптимизации:**
 - Connection pool per replica
@@ -511,9 +513,9 @@
 
 | Backend | Latency | Consistency | Когда |
 |---------|---------|-------------|-------|
-| Redis | Low | Eventual | Большинство случаев |
-| ETCD | Low | Strong | K8s ecosystem |
-| DB | Medium | Strong | Уже есть, простой вариант |
+| Redis | Измерить на стенде | Зависит от чтения primary/replica, failover и клиентского кэша | Общий store с явной политикой устаревания |
+| ETCD | Измерить на стенде | Линейризуемое чтение при соответствующем режиме; локальный кэш может отставать | Координация конфигурации |
+| DB | Измерить на стенде | Зависит от изоляции транзакций, реплик и клиентского кэша | Использование существующей БД |
 
 **План реализации:**
 1. Redis/ETCD как config store, key: `feature:{name}`
@@ -617,7 +619,7 @@
 - **L1:** At-least-once — дубликаты при retry
 - **L2:** Producer idempotence
 - **L3:** Transactional read-process-write
-- **L4:** Cross-partition exactly-once
+- **L4:** Границы Kafka-транзакции и согласование эффекта во внешней системе
 
 **Стратегии решения:**
 
@@ -625,13 +627,14 @@
 |---------|----------|
 | Producer | enable.idempotence=true, acks=all |
 | Consumer | Commit после обработки, idempotent handler |
-| Transactional | Producer init transactions, consumer read_committed |
+| Transactional | Output topics и consumer offsets в одной транзакции; consumers с read_committed |
 
 **План реализации:**
 1. Idempotent producer: PID + sequence
 2. Consumer: idempotency key в бизнес-логике (как в задаче 04)
-3. Transactional: для exactly-once stream processing
-4. Мониторинг: consumer lag, duplicate_detected metric
+3. Transactional: exactly-once для Kafka→Kafka при атомарной фиксации output и offsets; вызов handler может повторяться при abort/retry
+4. Внешняя БД/API: проверить inbox/outbox, атомарную запись эффекта с отметкой обработки или idempotency контракт получателя
+5. Мониторинг: consumer lag, duplicate_detected metric
 
 **Оптимизации:**
 - Batch processing с сохранением order
@@ -672,7 +675,7 @@
 
 **Уровни проблемы:**
 - **L1:** Cron на каждой ноде — N копий job
-- **L2:** Distributed lock — один исполнитель
+- **L2:** Lease ограничивает владение по времени; старый исполнитель может продолжать работу после expiry
 - **L3:** Leader election, failover
 - **L4:** Long-running jobs, checkpointing
 
@@ -685,10 +688,10 @@
 | Queue | Kafka, Redis Queue | Job как message |
 
 **План реализации:**
-1. Redis lock: key=job_name, value=instance_id, TTL=job_timeout*2
-2. Lock renewal: background goroutine, extend TTL каждые TTL/3
-3. Fencing token: increment при каждом acquire
-4. Job metadata: next_run, last_run, status
+1. Lease: key=job_name, уникальный token каждой попытки; TTL — часть модели отказов, а не доказательство завершения предыдущей работы
+2. Renewal/release только после атомарной проверки token; определить поведение при потере lease
+3. Если нужен fencing: надёжный источник монотонных tokens и атомарная проверка в защищаемом ресурсе; обычный INCR с потерей состояния при failover недостаточен
+4. Job metadata: next_run, last_run, status; сохранять состояние и дедуплицировать эффекты повторных попыток
 
 **Оптимизации:**
 - Мониторинг: job_duration, lock_contention
@@ -760,18 +763,20 @@
 ### 26 — Zero-Copy File Server
 
 **Уровни проблемы:**
-- **L1:** read() + write() — 4 copy operations
-- **L2:** sendfile() — kernel copy
-- **L3:** mmap + write — 2 copies
-- **L4:** DMA, kernel bypass (DPDK) — advanced
+- **L1:** read() + write() — путь через пользовательский буфер
+- **L2:** sendfile() — передача средствами ядра при поддержке выбранного пути
+- **L3:** mmap + write — отображение файла, page faults и запись в socket
+- **L4:** Отдельно исследовать DMA и kernel bypass; sendfile не обходит ядро
 
 **Стратегии решения:**
 
-| Метод | Copies | Когда |
-|-------|--------|-------|
-| read/write | 4 | Baseline |
-| sendfile | 2 | Static files, Linux |
-| mmap | 2 | Random access |
+| Метод | Что сравнивать | Условия |
+|-------|----------------|---------|
+| read/write | CPU, syscalls, буферы | Baseline на том же workload |
+| sendfile | CPU и throughput при передаче файла | Поддержка ОС, файловой системы и transport/TLS path |
+| mmap | Page faults, RSS, стоимость доступа | Размер данных и warm/cold page cache |
+
+Число копирований зависит от ОС, драйверов, оборудования и транспорта. Описать конкретный data path и проверить измерениями.
 
 **План реализации:**
 1. sendfile(out_fd, in_fd, offset, count)
@@ -789,19 +794,21 @@
 ### 27 — Binary Protocol Parser
 
 **Уровни проблемы:**
-- **L1:** JSON — просто, но медленно
+- **L1:** Измерить стоимость JSON на выбранных payload; сравнить с бинарными форматами
 - **L2:** Schema evolution
 - **L3:** Cross-language compatibility
 - **L4:** Streaming, partial parse
 
 **Стратегии решения:**
 
-| Формат | Size | Speed | Schema |
-|--------|------|-------|--------|
-| JSON | Large | Slow | No |
-| MessagePack | Medium | Fast | No |
-| Protobuf | Small | Fast | Yes |
-| FlatBuffers | Small | Zero-copy | Yes |
+| Формат | Что исследовать | Схема |
+|--------|----------------|-------|
+| JSON | Текстовое представление, числа/строки, влияние сжатия | Внешняя валидация при необходимости |
+| MessagePack | Размер и стоимость декодирования тех же данных | Контракт приложения |
+| Protobuf | Generated code, размер и совместимость полей | Явная схема |
+| FlatBuffers | Доступ к данным в буфере, валидация и lifetime | Явная схема |
+
+Размер и скорость сравнивать на одинаковых данных и условиях; доступ без полной распаковки не означает отсутствие копирований во всей системе.
 
 **План реализации:**
 1. Protobuf schema definition
@@ -830,17 +837,17 @@
 
 | Аспект | Решение |
 |--------|---------|
-| Quorum | N/2+1 Redis instances |
+| Quorum | Большинство независимых Redis instances в пределах допустимого времени захвата; исследовать предположения о часах и отказах |
 | Value | Random, verify on release |
-| TTL | Больше max execution time |
-| Fencing | Monotonic token в protected resource |
+| TTL | Выбрать lease budget; пауза процесса может превысить его, поэтому TTL не останавливает старого владельца |
+| Fencing | Отдельный надёжный источник монотонных tokens и проверка в protected resource; Redlock сам их не выдаёт |
 
 **План реализации:**
-1. 5 Redis instances (или 3 minimum)
-2. Lock: SET NX PX на всех, quorum = 3
-3. Unlock: verify value, DEL
-4. Renewal: extend TTL до завершения
-5. Fencing: при записи в DB — check token > last
+1. Для опыта задать N независимых Redis instances, например N=5
+2. Lock: SET NX PX, большинство floor(N/2)+1, проверка оставшегося срока lease с учётом времени захвата
+3. Unlock: атомарно сравнить уникальный token попытки и выполнить DEL
+4. Renewal: проверять token и условия продления; смоделировать потерю lease и возобновление старого владельца
+5. Fencing: отдельно определить надёжный порядок tokens и атомарно отклонять устаревшие записи в защищаемом ресурсе; сравнить с транзакционными ограничениями БД
 
 **Оптимизации:**
 - Jitter при retry
@@ -894,13 +901,13 @@
 | Hot | Small balance, fast access |
 | Cold | Bulk, offline, multi-sig |
 | Withdrawal | Queue, approval workflow |
-| Audit | Immutable log всех операций |
+| Audit | Append-only журнал моделируемых операций; полнота и защита от изменения требуют отдельных проверок |
 
 **План реализации:**
 1. Hot wallet: API, daily limit
 2. Cold: offline, M-of-N signatures
 3. Withdrawal: create → approve (N) → execute
-4. Audit log: append-only, hash chain
+4. Audit log: append-only, hash chain с доверенным checkpoint; проверить пропуски событий, изменение истории и восстановление
 
 **Оптимизации:**
 - Rate limit на withdrawal requests
@@ -909,10 +916,12 @@
 
 ---
 
-## Общий чеклист Senior/Lead
+## Общий протокол проверки
 
 Для каждой задачи:
 
+- [ ] **Гипотеза и границы:** инвариант, baseline, модель отказов, условия применимости вывода
+- [ ] **Статус:** разделены план, реализованное поведение и проверенные результаты
 - [ ] **Медленные запросы:** EXPLAIN ANALYZE, pg_stat_statements, индексы
 - [ ] **Метрики:** latency p50/p95/p99, error rate, throughput
 - [ ] **Failure modes:** что если Redis/DB/network down?
